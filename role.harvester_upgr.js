@@ -48,11 +48,9 @@ var roleHarvesterUpgr = {
             }
         }
         else{
-            var sources = creep.room.find(FIND_SOURCES, {
-                filter: (source) => {
-                    return (source.energy > 0);
-                    }
-            });
+            var sources = creep.room.find(FIND_SOURCES
+                // , {filter: (source) => {return (source.energy > 0);}}
+            );
             if(sources.length > 1){
                 if(creep.harvest(sources[1]) == ERR_NOT_IN_RANGE) {
                     creep.moveTo(sources[1], {visualizePathStyle: {stroke: '#ffffff'}});

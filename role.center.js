@@ -1,45 +1,9 @@
 var roleCenter = {
+    run: function(creep, Containers, dLinks, Extantions, Spawns, Towers, Nukers, Terminals, Storages) {
+        const roomName = creep.room.name;
+        //PRIORITY LIST:
+        //EXT/SPAWN -> TOWERS -> NUKER -> STORAGE/TERMINAL
 
-    /** @param {Creep} creep **/
-    run: function(creep) {
-
-
-        //НЕОПТИМИЗИРОВАННЫЙ КАЛ
-        var source_links = [];
-        var destination_links = [];
-        var sources = creep.room.find(FIND_SOURCES);
-        var links = creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return(structure.structureType == STRUCTURE_LINK) &&
-                    structure.isActive();
-            }});
-        _.forEach(links, function(link) {
-            var closest_source = link.pos.findClosestByRange(sources);
-            if (link.pos.getRangeTo(closest_source) < 3) {
-                source_links.push(link);
-            } else {
-                destination_links.push(link);
-            }
-        });
-
-        //console.log(creep + destination_links);
-        //////////////////
-
-
-
-
-
-
-
-
-        var terminal = creep.room.find(FIND_STRUCTURES, {
-            filter: (structure) => {
-                return(structure.structureType == STRUCTURE_TERMINAL) &&
-                structure.store[RESOURCE_ENERGY] < 100000 && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 600
-                // && Game.market.credits < 1000000;
-            }
-        });
-        var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
         if(creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0) {
             creep.memory.transferring = false;
         }
@@ -48,215 +12,158 @@ var roleCenter = {
         }
 
         if(creep.memory.transferring) {
-            var towers = creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return(
-                        structure.structureType == STRUCTURE_TOWER) &&
-                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 100;
+            const extentions = Extantions.get(roomName).concat(Spawns.get(roomName)).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+            if(extentions.length > 0){
+                const target = creep.pos.findClosestByPath(extentions);
+                if(creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(target, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
                 }
-            });
-            var targets = creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return(
-                        structure.structureType == STRUCTURE_SPAWN ||
-                        structure.structureType == STRUCTURE_EXTENSION) &&
-                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-                    }
-                });
-            var enemies = creep.room.find(FIND_HOSTILE_CREEPS);
-            var structures = creep.pos.findClosestByPath(targets);
-            if(enemies != 0 && harvesters > 1 && towers != 0){
-                var towers = creep.room.find(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        return(structure.structureType == STRUCTURE_TOWER) &&
-                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 100;
-                    }
-                });
-                var tower = creep.pos.findClosestByPath(towers);
-                if(towers != 0){
-                    if(creep.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                        creep.moveTo(tower, {visualizePathStyle: {stroke: '#ffffff'}});
-                    }
-                }
-
             }
-            if(enemies != 0 && towers == 0){
-                if(creep.transfer(structures, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                    creep.moveTo(structures, {visualizePathStyle: {stroke: '#ffffff'}});
+            else{
+                const towers = Towers.get(roomName).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+                if(towers.length > 0){
+                    const target = towers[0];
+                    if(creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(target, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
+                    }
+                }
+                else{
+                    const nukers = Nukers.get(roomName).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+                    if(nukers.length > 0){
+                        const target = nukers[0];
+                        if(creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                            creep.moveTo(target, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
+                        }
+                    }
+                    else{
+                        const terminals = Terminals.get(roomName).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+                        if(terminals.length > 0){
+                            const target = terminals[0];
+                            if(creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                                creep.moveTo(target, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
+                            }
+                        }
+                        else{
+                            const storages = Storages.get(roomName).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+                            if(storages.length > 0){
+                                const target = storages[0];
+                                if(creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                                    creep.moveTo(target, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
+                                }
+                            }
+                        }
+                    }
                 }
             }
             /*
-            У меня нет проблем, кроме моей башки
-            1000-7, я умер, прости
-            Этот ёбаный дождь нагоняет тоски
-            1000-7, я умер, прости
-            И им всем никогда меня не победить
-            1000-7, я уже погиб
-            У меня есть суммы, но мне так по-о-о-х
-            Не вывожу из сукиного рта, пох
-            Я чувствую вкус крови на губах, сдох
-            Им никогда не победить меня (Никогда)
-            Под её окном написал «Ты шлюха»
-            Клонит спать, но только если под утро
-            Это мёртвый звук, на колени, сука
-            Я реально мёртвый и это — не шутка
-            У меня нет проблем, кроме моей башки
-            1000-7, я умер, прости
-            Этот ёбаный дождь нагоняет тоски
-            1000-7, я умер, прости
-            Им всем никогда меня не победить
-            1000-7, я уже погиб
-            У меня нет проблем, кроме моей башки
-            1000-7, я умер, прости
-            Этот ёбаный дождь нагоняет тоски
-            1000-7, я умер, прости
-            Им всем никогда меня не победить
-            1000-7, я уже погиб
-            У меня есть суммы, но мне так по-о-о-х
-            Не вывожу из сукиного рта, пох
-            Я чувствую вкус крови на губах, сдох
-            Им никогда не победить меня (Никогда)
+Why does everything end up like this
+I swear I knew it would end
+I’m getting used to it, I know you’d come back and quit
+I know you’re with him not me, get away
+
+Why does everyone hate me right now
+I swear it’s like I just found out
+What did I expect this time I will pretend that I’m fine
+Cus I don’t want you hearing about me
+
+I guess you really didn’t think i'd find out
+I know you’re using me right now
+Say I’m just like him but I’m second best
+Yeah, if you had him I know you’d leave me like thе rest
+
+It’s your fake heart, yеah its fake love
+Say you wanna come back and make things up to me
+But I don’t want that, I don’t want that
+Leave me alone i'll be fine
+
+Sick to death of watching the best of me get eaten alive
+I still see your heart on your shoulder when you look at my eyes
+Why can’t you let me go
+I don’t feel it, it’s over
+
+Kiss me on the cheek, close my eyes yeah i'll step away
+Biting on my lips, I know if I don’t leave I will decay
+Don’t look down look at me
+I’m doing alright so just leave
+You might also like
+BAD DAYS
+Rivilin
+WHERE IS MY MIND (Mash-Up)
+Rivilin
+wacced out murals
+Kendrick Lamar
+Why does everything end up like this
+I swear I knew it would end
+I’m getting used to it, I know you’d come back and quit
+I know you’re with him not me, get away
+
+Why does everyone hate me right now
+I swear it’s like I just found out
+What did I expect this time I will pretend that I’m fine
+Cus I don’t want you hearing about me
+
+Lying on the floor I see you cover your eyes
+The sun is just too bright
+You talking to him and you get into his car
+Leave me here stranded on the road, where did I go wrong no
+
+Don’t recognize the face in front of me
+Yeah the mirror doesn’t seem to give images I wanna see
+So I shut down and shut out everyone
+Learn to be alone but it wasn’t fun
+
+Forgive and forget half-alive here at best
+My memories are getting hazy so please just
+Understand that I need to take a break
+Between us it wasn’t about you and me I knew you always were fake
+
+Kiss me on the cheek, close my eyes yeah i'll step away
+Biting on my lips, I know if I don’t leave I will decay
+Don’t look down look at me
+I’m doing alright so just leave
+
+Why does everything end up like this
+I swear I knew it would end
+I’m getting used to it, I know you’d come back and quit
+I know you’re with him not me, getaway
+
+Why does everyone hate me right now
+I swear it’s like I just found out
+What did I expect this time I will pretend that I’m fine
+Cus I don’t want you hearing about me
+
+Why does everything end up like this
+I swear I knew it would end
+I’m getting used to it, I know you’d come back and quit
+I know you’re with him not me, getaway
+
+Why does everyone hate me right now
+I swear it’s like I just found out
+What did I expect this time I will pretend that I’m fine
+Cus I don’t want you hearing about me
             */
-
-            else{
-                var towers = creep.room.find(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        return(
-                            structure.structureType == STRUCTURE_TOWER) &&
-                            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 100;
-                    }
-                });
-                if(targets != 0){
-                    if(creep.transfer(structures, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                        creep.moveTo(structures, {visualizePathStyle: {stroke: '#ffffff'}});
-                    }
-                }
-                /*
-                if(targets == 0 && towers != 0 && creep.store[RESOURCE_KEANIUM] == 0 && creep.store[RESOURCE_ZYNTHIUM] == 0){
-                    var towers = creep.room.find(FIND_STRUCTURES, {
-                        filter: (structure) => {
-                            return(structure.structureType == STRUCTURE_TOWER) &&
-                            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 100;
-                        }
-                    });
-                    var tower = creep.pos.findClosestByRange(towers);
-                    if(creep.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                        creep.moveTo(tower, {visualizePathStyle: {stroke: '#800080'}});
-                    }
-                }
-                if(targets == 0 && towers == 0 && creep.store[RESOURCE_ZYNTHIUM] > 0 && zLab.store.getFreeCapacity(RESOURCE_ZYNTHIUM) > 0 && terminal.length == 0){
-                    var terminal = creep.room.find(FIND_STRUCTURES, {
-                        filter: (structure) => {
-                            return(structure.structureType == STRUCTURE_TERMINAL) &&
-                            structure.store[RESOURCE_ZYNTHIUM] > 0;
-                        }
-                    });
-                    if(creep.withdraw(terminal[0], RESOURCE_ZYNTHIUM) == ERR_NOT_IN_RANGE){
-                        creep.moveTo(terminal[0], {visualizePathStyle: {stroke: '#ffffff'}});
-                    }
-                }
-                if(creep.store[RESOURCE_ZYNTHIUM] != 0){
-                    if(creep.transfer(zLab, RESOURCE_ZYNTHIUM) == ERR_NOT_IN_RANGE){
-                        creep.moveTo(zLab, {visualizePathStyle: {stroke: '#ffffff'}});
-                    }
-                }
-
-                if(targets == 0 && towers == 0 && creep.store[RESOURCE_KEANIUM] == 0 && kLab.store.getFreeCapacity(RESOURCE_KEANIUM) > 0 && terminal.length == 0){
-                    var terminal = creep.room.find(FIND_STRUCTURES, {
-                        filter: (structure) => {
-                            return(structure.structureType == STRUCTURE_TERMINAL) &&
-                            structure.store[RESOURCE_KEANIUM] > 0;
-                        }
-                    });
-                    if(creep.withdraw(terminal[0], RESOURCE_KEANIUM) == ERR_NOT_IN_RANGE){
-                        creep.moveTo(terminal[0], {visualizePathStyle: {stroke: '#ffffff'}});
-                    }
-                }
-                if(creep.store[RESOURCE_KEANIUM] != 0){
-                    if(creep.transfer(kLab, RESOURCE_KEANIUM) == ERR_NOT_IN_RANGE){
-                        creep.moveTo(kLab, {visualizePathStyle: {stroke: '#ffffff'}});
-                    }
-                }
-                */
-                else{
-                    var towers = creep.room.find(FIND_STRUCTURES, {
-                        filter: (structure) => {
-                            return(structure.structureType == STRUCTURE_TOWER) &&
-                            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 100;
-                        }
-                    });
-                    var tower = creep.pos.findClosestByPath(towers);
-                    var lab = creep.room.find(FIND_STRUCTURES, {
-                        filter: (structure) => {
-                            return(structure.structureType == STRUCTURE_LAB) &&
-                            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 100;
-                        }
-                    });
-                    var nuker = creep.room.find(FIND_MY_STRUCTURES, {
-                        filter: (structure) => {
-                            return(structure.structureType == STRUCTURE_NUKER) &&
-                            structure.store.getFreeCapacity(RESOURCE_ENERGY) != 0;
-                        }
-                    });
-                    var factory = creep.room.find(FIND_MY_STRUCTURES, {
-                        filter: (structure) => {
-                            return(structure.structureType == STRUCTURE_FACTORY) &&
-                            structure.store[RESOURCE_ENERGY] < 5000;
-                        }
-                    });
-                    var powerSpawn = creep.room.find(FIND_STRUCTURES, {
-                        filter: (structure) => {
-                            return(
-                                structure.structureType == STRUCTURE_POWER_SPAWN) &&
-                                structure.store[RESOURCE_ENERGY] < 5000;
-                            }
-                    });
-                    if(terminal.length != 0 && towers.length == 0){
-                        if(creep.transfer(terminal[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                            creep.moveTo(terminal[0], {visualizePathStyle: {stroke: '#ffffff'}});
-                        }
-                     }
-                    
-                    if(lab.length != 0 && towers.length == 0){
-                        if(creep.transfer(lab[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                            creep.moveTo(lab[0]);
-                        }
-                    }
-                    if(powerSpawn.length != 0 && towers.length == 0 && terminal.length == 0 && lab.length == 0 && nuker.length == 0){
-                        if(creep.transfer(powerSpawn[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                            creep.moveTo(powerSpawn[0]);
-                        }
-                    }
-                    if(towers.length != 0){
-                        if(creep.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                            creep.moveTo(tower);
-                        }
-                    }
-                    if(nuker.length != 0 && factory.length == 0 && towers.length == 0){
-                        if(creep.transfer(nuker[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                            creep.moveTo(nuker[0]);
-                        }
-                    }
-                    if(factory.length != 0 && towers.length == 0){
-                        if(creep.transfer(factory[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                            creep.moveTo(factory[0]);
-                        }
-                    }
-                }
-            }
-            
         }   
         else {
-            var sources = creep.pos.findClosestByPath(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return(structure.structureType == STRUCTURE_CONTAINER);
-                }
-            });
-            if(creep.withdraw(sources, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(sources, {visualizePathStyle: {stroke: '#800080'}});
+            const sources = Containers.get(roomName).filter(s => s.store[RESOURCE_ENERGY] > 0);
+            let target = [];
+            if(sources.length > 0){
+                target = creep.pos.findClosestByRange(sources);
             }
-            if(creep.withdraw(creep.pos.findClosestByPath(destination_links), RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(creep.pos.findClosestByPath(destination_links), {visualizePathStyle: {stroke: '#800080'}});
+            else{
+                const links = dLinks.get(roomName);
+                const closestLink = creep.pos.findClosestByRange(links);
+                if(closestLink.store[RESOURCE_ENERGY] > 0){
+                    target = creep.pos.findClosestByRange(links);
+                }
+                else{
+                    const storages = Storages.get(roomName).filter(s => s.store[RESOURCE_ENERGY] > 0);
+                    if(storages.length > 0){
+                        target = storages[0];
+                    }
+                }
+            }
+            if(creep.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(target, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
             }
         }
     }
