@@ -206,7 +206,6 @@ CACHE();
 
 profiler.enable();
 module.exports.loop = function() {
-    console.log("OK?");    
     profiler.wrap(function() {
     Game.cpu.generatePixel();
     
