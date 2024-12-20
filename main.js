@@ -261,7 +261,8 @@ CACHE();
 
 profiler.enable();
 module.exports.loop = function() {
-    const encoded = map_codec.encode([43,38]);
+    const arr = [43,38];
+    const encoded = map_codec.encode(arr);
     const decoded = map_codec.decode(encoded);
     console.log(encoded);
     console.log(decoded);
