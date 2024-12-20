@@ -248,7 +248,7 @@ function roomPlanCacher(roomName){
                 }
             });
 
-            Memory.cache.roomPlan[roomName][structureType] = encodedPositions.join('');
+            Memory.cache.roomPlan[roomName][structureType] = encodedPositions;
         });
     }
 }
