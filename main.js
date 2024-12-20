@@ -262,7 +262,7 @@ CACHE();
 profiler.enable();
 module.exports.loop = function() {
     const map = new utf15.Codec({depth: 6, array: 1});
-    const arr = [43,38];
+    const arr = [[43,38],[12,13]];
     const encoded = map.encode(arr);
     const decoded = map.decode(encoded);
     console.log(encoded);
