@@ -222,16 +222,13 @@ function render(){
     ;
 }
 
-function roomPlanCacher(roomName) {
+Memory.cache.roomPlanCacher = function (roomName) {
     if (Game.time % 5 === 0) {
-        if (!Memory.cache) {
-            Memory.cache = {};
+        if (!this.roomPlan) {
+            this.roomPlan = {};
         }
-        if (!Memory.cache.roomPlan) {
-            Memory.cache.roomPlan = {};
-        }
-        if (!Memory.cache.roomPlan[roomName]) {
-            Memory.cache.roomPlan[roomName] = {};
+        if (!this.roomPlan[roomName]) {
+            this.roomPlan[roomName] = {};
         }
 
         const structures = Game.rooms[roomName].find(FIND_STRUCTURES, {
@@ -252,10 +249,10 @@ function roomPlanCacher(roomName) {
                 }
             });
 
-            Memory.cache.roomPlan[roomName][structureType] = encodedPositions.join();
+            Memory.cache.roomPlan[roomName][structureType] = encodedPositions.join('');
         });
     }
-}
+};
 
 
 
