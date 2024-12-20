@@ -197,8 +197,8 @@ function render(){
 
 function roomPlanCacher(roomName){
     if(Game.time % 5 === 0){
-        if(!Memory.cache.roomPlan[roomName]){
-            Memory.cache.roomPlan[roomName] = {}
+        if(!Memory.cache.roomPlan){
+            Memory.cache.roomPlan = {};
         }
     }
     const structures = Game.rooms[roomName].find(FIND_STRUCTURES, {filter: (structure) => structure.isActive()});
