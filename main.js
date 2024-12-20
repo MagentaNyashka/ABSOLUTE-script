@@ -310,7 +310,7 @@ module.exports.loop = function() {
 
 
         try {
-            const decoded = map_codec.decode(Memory.cache.roomPlan[room_spawn.room.name][STRUCTURE_EXTENSION]);
+            const decoded = map_codec.decode(Memory.cache.roomPlan[room_spawn.room.name][STRUCTURE_EXTENSION][0]);
             console.log(decoded);
         } catch (error) {
             console.log("Error decoding:", error);
