@@ -222,8 +222,7 @@ function render(){
     ;
 }
 
-if (!Memory.cache.roomPlanCacher) {
-    Memory.cache.roomPlanCacher = function (roomName) {
+function roomPlanCacher(roomName){
         if (Game.time % 5 === 0) {
             if (!this.roomPlan) {
                 this.roomPlan = {};
@@ -253,7 +252,6 @@ if (!Memory.cache.roomPlanCacher) {
                 Memory.cache.roomPlan[roomName][structureType] = encodedPositions.join('');
             });
         }
-    };
 }
 
 
@@ -310,7 +308,7 @@ module.exports.loop = function() {
         }
 
         //links
-        Memory.cache.roomPlanCacher(room_spawn.room.name);
+        roomPlanCacher(room_spawn.room.name);
 
         CACHE_LINKS(room_spawn);
         const source_links = sLinks.get(room_spawn.room.name);
