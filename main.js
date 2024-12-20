@@ -197,13 +197,19 @@ function render(){
 
 function roomPlanCacher(roomName){
     if(Game.time % 5 === 0){
-        if(!Memory.cache.roomPlan){
+        if (!Memory.cache) {
+            Memory.cache = {};
+        }
+        if (!Memory.cache.roomPlan) {
             Memory.cache.roomPlan = {};
         }
+        if (!Memory.cache.roomPlan[roomName]) {
+            Memory.cache.roomPlan[roomName] = {};
+        }
+        const structures = Game.rooms[roomName].find(FIND_STRUCTURES, {filter: (structure) => structure.isActive()});
+        const grouped = _.groupBy(structures, s => s.structureType);
+        Memory.cache.roomPlan[roomName][STRUCTURE_EXTENSION] = grouped[STRUCTURE_EXTENSION] || [];
     }
-    const structures = Game.rooms[roomName].find(FIND_STRUCTURES, {filter: (structure) => structure.isActive()});
-    const grouped = _.groupBy(structures, s => s.structureType);
-    Memory.cache.roomPlan[roomName][STRUCTURE_EXTENSION] = grouped[STRUCTURE_EXTENSION] || [];
 }
 
 CACHE_SPAWN();
