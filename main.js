@@ -240,22 +240,23 @@ function roomPlanCacher(roomName) {
         const grouped = _.groupBy(structures, (s) => s.structureType);
 
         _.forEach(STRUCTURE_TYPES, function (structureType) {
-            let structure_list = [];
+            let encodedPositions = [];
             _.forEach(grouped[structureType], function (structure) {
-                // Use only [x, y] to simplify the input
                 const values = [structure.pos.x, structure.pos.y];
-                // Adjust the depth configuration to match this array structure
                 const map_codec = new utf15.Codec({ depth: 2, array: 1 });
                 try {
-                    structure_list.push(map_codec.encode(values));
+                    const encoded = map_codec.encode(values);
+                    encodedPositions.push(encoded);
                 } catch (error) {
                     console.log(`Error encoding position for ${structureType}:`, error);
                 }
             });
-            Memory.cache.roomPlan[roomName][structureType] = structure_list || [];
+
+            Memory.cache.roomPlan[roomName][structureType] = encodedPositions.join();
         });
     }
 }
+
 
 
 
