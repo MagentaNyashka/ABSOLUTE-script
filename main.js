@@ -222,8 +222,8 @@ function render(){
     ;
 }
 
-function roomPlanCacher(roomName){
-    if(Game.time % 5 === 0){
+function roomPlanCacher(roomName) {
+    if (Game.time % 5 === 0) {
         if (!Memory.cache) {
             Memory.cache = {};
         }
@@ -233,19 +233,32 @@ function roomPlanCacher(roomName){
         if (!Memory.cache.roomPlan[roomName]) {
             Memory.cache.roomPlan[roomName] = {};
         }
-        const structures = Game.rooms[roomName].find(FIND_STRUCTURES, {filter: (structure) => structure.isActive()});
-        const grouped = _.groupBy(structures, s => s.structureType);
-        _.forEach(STRUCTURE_TYPES, function(structureType){
+
+        const structures = Game.rooms[roomName].find(FIND_STRUCTURES, {
+            filter: (structure) => structure.isActive(),
+        });
+        const grouped = _.groupBy(structures, (s) => s.structureType);
+
+        _.forEach(STRUCTURE_TYPES, function (structureType) {
             let structure_list = [];
-            _.forEach(grouped[structureType], function(structure){
-                const values = structure.pos;
-                const map_codec = new utf15.Codec({ depth:depths, array:1 });
-                structure_list.push(map_codec.encode(values));
+            _.forEach(grouped[structureType], function (structure) {
+                const values = {
+                    x: structure.pos.x,
+                    y: structure.pos.y,
+                    roomName: structure.pos.roomName,
+                };
+                const map_codec = new utf15.Codec({ depth: depths, array: 1 });
+                try {
+                    structure_list.push(map_codec.encode(values));
+                } catch (error) {
+                    console.log(`Error encoding position for ${structureType}:`, error);
+                }
             });
             Memory.cache.roomPlan[roomName][structureType] = structure_list || [];
         });
     }
 }
+
 
 CACHE_SPAWN();
 CACHE();
