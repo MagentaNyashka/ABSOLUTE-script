@@ -223,32 +223,36 @@ function render(){
 }
 
 function roomPlanCacher(roomName){
-        if (Game.time % 5 === 0) {
-            if (!this.roomPlan) {
-                this.roomPlan = {};
-            }
-            if (!this.roomPlan[roomName]) {
-                this.roomPlan[roomName] = {};
-            }
-
-            const structures = Game.rooms[roomName].find(FIND_STRUCTURES, {
-                filter: (structure) => structure.isActive(),
-            });
-            const grouped = _.groupBy(structures, (s) => s.structureType);
-
-            _.forEach(STRUCTURE_TYPES, function (structureType) {
-                let positions = [];
-                _.forEach(grouped[structureType], function (structure) {
-                    const values = [structure.pos.x, structure.pos.y];
-                    positions.push(values);
-                });
-                const map_codec = new utf15.Codec({ depth: 2, array: 1 });
-                const encoded = map_codec.encode(positions);
-                Memory.cache.roomPlan[roomName][structureType] = encoded;
-            });
+    if (Game.time % 5 === 0) {
+        if (!this.roomPlan) {
+            this.roomPlan = {};
         }
-}
+        if (!this.roomPlan[roomName]) {
+            this.roomPlan[roomName] = {};
+        }
 
+        const structures = Game.rooms[roomName].find(FIND_STRUCTURES, {
+            filter: (structure) => structure.isActive(),
+        });
+        const grouped = _.groupBy(structures, (s) => s.structureType);
+
+        _.forEach(STRUCTURE_TYPES, function (structureType) {
+            let encodedPositions = [];
+            _.forEach(grouped[structureType], function (structure) {
+                const values = [structure.pos.x, structure.pos.y];
+                const map_codec = new utf15.Codec({ depth: 2, array: 1 });
+                try {
+                    const encoded = map_codec.encode(values);
+                    encodedPositions.push(encoded);
+                } catch (error) {
+                    console.log(`Error encoding position for ${structureType}:`, error);
+                }
+            });
+
+            Memory.cache.roomPlan[roomName][structureType] = encodedPositions.join('');
+        });
+    }
+}
 
 
 
