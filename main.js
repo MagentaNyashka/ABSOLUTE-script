@@ -79,7 +79,6 @@ function CACHE_SPAWN() {
         }
     });
 }
-
 function CACHE() {
     _.forEach(my_spawns, function(room_spawn) {
         const activeStructures = room_spawn.room.find(FIND_STRUCTURES, {
@@ -102,7 +101,6 @@ function CACHE() {
         ConstructionSites.set(room_spawn.room.name, room_spawn.room.find(FIND_CONSTRUCTION_SITES) || []);
     });
 }
-
 function CACHE_CREEPS(room_spawn) {
     const creepsByRoom = Object.values(Game.creeps).filter(creep => creep.room.name === room_spawn.room.name);
 
@@ -130,8 +128,6 @@ function CACHE_CREEPS(room_spawn) {
     Centers.set(room_spawn.room.name, centers);
     HarvesterUpgr.set(room_spawn.room.name, harvester_upgr);
 }
-
-
 function TowerCACHE(room_spawn){
     var hostiles = room_spawn.room.find(FIND_HOSTILE_CREEPS);
     Enemies.set(room_spawn.room.name, hostiles);
@@ -153,7 +149,6 @@ function TowerCACHE(room_spawn){
     DamagedStructures.set(room_spawn.room.name, damagedStructures);
     DamagedWalls.set(room_spawn.room.name, damagedStructures);
 }
-
 function CACHE_LINKS(room_spawn){
         var sources = Sources.get(room_spawn.room.name);
         var links = Links.get(room_spawn.room.name);
@@ -185,7 +180,6 @@ function render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHa
             .text('Transferers ' + Transfers.get(room_spawn.room.name).length + '/' + maxTransferers, 36, 6.8, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
             ;
 }
-
 function render(){
     const roomCount = Object.values(Game.rooms).filter(room => room.controller && room.controller.my).length;
     const limit = Game.cpu.limit;
@@ -199,6 +193,16 @@ function render(){
     .text('Cpu.Limit ' + limit, 36, 2, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
     .text('Bucket ' + Game.cpu.bucket + '/10000(' + (10000 - Game.cpu.bucket) + ')', 36, 2.6, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
     ;
+}
+
+function roomPlanCacher(roomName){
+    if(Game.time % 500 === 0){
+        if(!Memory.cache.roomPlan[roomName]){
+            Memory.cache.roomPlan[roomName] = {}
+        }
+    }
+    const structures = Game.rooms[roomName].find(FIND_STRUCTURES, {filter: (structure) => structure.isActive()});
+    const grouped = _.groupBy(structures, s => s.structureType);
 }
 
 CACHE_SPAWN();
@@ -251,6 +255,8 @@ module.exports.loop = function() {
         }
 
         //links
+        roomPlanCacher(room_spawn.room.name);
+
         CACHE_LINKS(room_spawn);
         const source_links = sLinks.get(room_spawn.room.name);
         const destination_links = dLinks.get(room_spawn.room.name).sort(function(a,b){return b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY];});
