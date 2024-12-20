@@ -242,9 +242,10 @@ function roomPlanCacher(roomName) {
         _.forEach(STRUCTURE_TYPES, function (structureType) {
             let structure_list = [];
             _.forEach(grouped[structureType], function (structure) {
-                // Convert RoomPosition to a simple array: [x, y, roomName]
-                const values = [structure.pos.x, structure.pos.y, structure.pos.roomName];
-                const map_codec = new utf15.Codec({ depth: depths, array: 1 });
+                // Use only [x, y] to simplify the input
+                const values = [structure.pos.x, structure.pos.y];
+                // Adjust the depth configuration to match this array structure
+                const map_codec = new utf15.Codec({ depth: 2, array: 1 });
                 try {
                     structure_list.push(map_codec.encode(values));
                 } catch (error) {
@@ -255,6 +256,7 @@ function roomPlanCacher(roomName) {
         });
     }
 }
+
 
 
 
