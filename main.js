@@ -15,7 +15,7 @@ const { lastIndexOf } = require('lodash');
 const profiler = require('screeps-profiler');
 const utf15 = require('utf15');
 
-const map_codec = new utf15.Codec({ depth: 2, array: 1 });
+const map_codec = new utf15.Codec({ depth: 2, array: 2 });
 
 const STRUCTURE_TYPES = [
     STRUCTURE_SPAWN,
@@ -261,6 +261,10 @@ CACHE();
 
 profiler.enable();
 module.exports.loop = function() {
+    const encoded = map_codec.encode([43,38]);
+    const decoded = map_codec.decode(encoded);
+    console.log(encoded);
+    console.log(decoded);
     profiler.wrap(function() {
     Game.cpu.generatePixel();
     
