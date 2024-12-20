@@ -237,19 +237,14 @@ function roomPlanCacher(roomName){
             const grouped = _.groupBy(structures, (s) => s.structureType);
 
             _.forEach(STRUCTURE_TYPES, function (structureType) {
-                let encodedPositions = [];
+                let positions = [];
                 _.forEach(grouped[structureType], function (structure) {
                     const values = [structure.pos.x, structure.pos.y];
-                    const map_codec = new utf15.Codec({ depth: 2, array: 1 });
-                    try {
-                        const encoded = map_codec.encode(values);
-                        encodedPositions.push(encoded);
-                    } catch (error) {
-                        console.log(`Error encoding position for ${structureType}:`, error);
-                    }
+                    positions.push(values);
                 });
-
-                Memory.cache.roomPlan[roomName][structureType] = encodedPositions.join('');
+                const map_codec = new utf15.Codec({ depth: 2, array: 1 });
+                const encoded = map_codec.encode(positions);
+                Memory.cache.roomPlan[roomName][structureType] = encoded;
             });
         }
 }
