@@ -314,14 +314,6 @@ module.exports.loop = function() {
         //links
         roomPlanCacher(room_spawn.room.name);
 
-
-        try {
-            const decoded = map_codec.decode(Memory.cache.roomPlan[room_spawn.room.name][STRUCTURE_EXTENSION][0]);
-            console.log(decoded);
-        } catch (error) {
-            console.log("Error decoding:", error);
-        }
-
         CACHE_LINKS(room_spawn);
         const source_links = sLinks.get(room_spawn.room.name);
         const destination_links = dLinks.get(room_spawn.room.name).sort(function(a,b){return b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY];});
