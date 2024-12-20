@@ -239,7 +239,8 @@ function roomPlanCacher(roomName){
             let structure_list = [];
             _.forEach(grouped[structureType], function(structure){
                 const values = structure.pos;
-                structure_list.push(values);
+                const map_codec = new Codec({ depth:depths, array:1 });
+                structure_list.push(map_codec.encode(values));
             });
             Memory.cache.roomPlan[roomName][structureType] = structure_list || [];
         });
