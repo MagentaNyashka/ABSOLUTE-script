@@ -13,6 +13,7 @@ var roleTransfer = require('role.transfer');
 var roleZavodskoy = require('role.zavodskoy');
 const { lastIndexOf } = require('lodash');
 const profiler = require('screeps-profiler');
+const utf15 = require('utf15');
 
 
 const STRUCTURE_TYPES = [
@@ -238,7 +239,7 @@ function roomPlanCacher(roomName){
             _.forEach(grouped[structureType], function(structure){
                 structure_list.push(structure.pos);
             });
-            Memory.cache.roomPlan[roomName][structureType] = structure_list || [];
+            Memory.cache.roomPlan[roomName][structureType] = utf15.decode_array(structure_list) || [];
         });
     }
 }
