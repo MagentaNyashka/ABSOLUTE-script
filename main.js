@@ -15,7 +15,7 @@ const { lastIndexOf } = require('lodash');
 const profiler = require('screeps-profiler');
 const utf15 = require('utf15');
 
-const map_codec = new utf15.Codec({ depth: 2, array: 1 });
+const map_codec = new utf15.Codec({ depth: 6, array: 1 });
 
 const STRUCTURE_TYPES = [
     STRUCTURE_SPAWN,
@@ -237,18 +237,12 @@ function roomPlanCacher(roomName){
         const grouped = _.groupBy(structures, (s) => s.structureType);
 
         _.forEach(STRUCTURE_TYPES, function (structureType) {
-            let encodedPositions = [];
+            let positions = [];
             _.forEach(grouped[structureType], function (structure) {
                 const values = [structure.pos.x, structure.pos.y];
-                try {
-                    const encoded = map_codec.encode(values);
-                    encodedPositions.push(encoded);
-                } catch (error) {
-                    console.log(`Error encoding position for ${structureType}:`, error);
-                }
+                positions.push(values);
             });
-
-            Memory.cache.roomPlan[roomName][structureType] = encodedPositions;
+            Memory.cache.roomPlan[roomName][structureType] = map_codec.encode(positions);
         });
     }
 }
@@ -261,12 +255,11 @@ CACHE();
 
 profiler.enable();
 module.exports.loop = function() {
-    const map = new utf15.Codec({depth: 6, array: 1});
-    const arr = [43,38,13,13,42,43,42,12,42];
-    const encoded = map.encode(arr);
-    const decoded = map.decode(encoded);
-    console.log(encoded);
-    console.log(decoded);
+    // const map = new utf15.Codec({depth: 6, array: 1});
+    // const encoded = map.encode(arr);
+    // const decoded = map.decode(encoded);
+    // console.log(encoded);
+    // console.log(decoded);
     profiler.wrap(function() {
     Game.cpu.generatePixel();
     
