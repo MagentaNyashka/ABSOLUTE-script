@@ -15,6 +15,7 @@ const { lastIndexOf } = require('lodash');
 const profiler = require('screeps-profiler');
 const utf15 = require('utf15');
 
+const depths = [2,   7,  7,  6,  6];
 
 const STRUCTURE_TYPES = [
     STRUCTURE_SPAWN,
@@ -237,9 +238,10 @@ function roomPlanCacher(roomName){
         _.forEach(STRUCTURE_TYPES, function(structureType){
             let structure_list = [];
             _.forEach(grouped[structureType], function(structure){
-                structure_list.push(structure.pos);
+                const values = structure.pos;
+                structure_list.push(values);
             });
-            Memory.cache.roomPlan[roomName][structureType] = utf15.decode_array(structure_list) || [];
+            Memory.cache.roomPlan[roomName][structureType] = structure_list || [];
         });
     }
 }
