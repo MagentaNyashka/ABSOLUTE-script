@@ -234,7 +234,7 @@ function roomPlanCacher(roomName){
         const structures = Game.rooms[roomName].find(FIND_STRUCTURES, {filter: (structure) => structure.isActive()});
         const grouped = _.groupBy(structures, s => s.structureType);
         _.forEach(STRUCTURE_TYPES, function(structureType){
-            let structure_list = {};
+            let structure_list = [];
             _.forEach(grouped[structureType], function(structure){
                 structure_list.push(structure.pos);
             });
