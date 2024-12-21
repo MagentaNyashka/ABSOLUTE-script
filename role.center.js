@@ -3,7 +3,6 @@ var roleCenter = {
         const roomName = creep.room.name;
         //PRIORITY LIST:
         //EXT/SPAWN -> TOWERS -> NUKER -> STORAGE/TERMINAL
-        global.getCachedStructures(roomName, STRUCTURE_EXTENSION);
         if(creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0) {
             creep.memory.transferring = false;
         }
