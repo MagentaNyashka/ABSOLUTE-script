@@ -3,7 +3,7 @@ var roleCenter = {
         const roomName = creep.room.name;
         //PRIORITY LIST:
         //EXT/SPAWN -> TOWERS -> NUKER -> STORAGE/TERMINAL
-        if(creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0) {
+        if(creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0 && creep.ticksToLive > 5) {
             creep.memory.transferring = false;
             delete creep.memory.target;
         }

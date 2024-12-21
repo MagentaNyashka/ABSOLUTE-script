@@ -3,8 +3,9 @@ var roleUpgrader = {
         const roomName = creep.room.name;
 
         const energyStructures = global.getCachedStructures(roomName, STRUCTURE_LINK).concat(global.getCachedStructures(roomName, STRUCTURE_CONTAINER));
+        const storage = Game.rooms[roomName].storage;
 
-        if(creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0) {
+        if(creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0 && creep.ticksToLive > 50) {
             creep.memory.transferring = false;
             delete creep.memory.target;
         }
@@ -22,8 +23,23 @@ var roleUpgrader = {
         }
         else if(!creep.memory.transferring && creep.store.getFreeCapacity() >= 0) {
             if(!creep.memory.target){
-                if(energyStructures.length != 0){creep.memory.target = creep.pos.findClosestByPath(energyStructures).id;}
-                else{creep.memory.target = creep.pos.findClosestByPath(global.getSources(creep.room.name)).id;}
+                if(storage.store[RESOURCE_ENERGY] > 100000){
+                    creep.memory.target = storage.id;
+                }
+                else{
+                    const terminal = Game.rooms[roomName].terminal;
+                    if(terminal.store[RESOURCE_ENERGY] > 5000){
+                        creep.memory.target = terminal.id;
+                    }
+                    else{
+                        if(energyStructures.length != 0){
+                            creep.memory.target = creep.pos.findClosestByPath(energyStructures).id;
+                        }
+                        else{
+                            creep.memory.target = creep.pos.findClosestByPath(global.getSources(roomName)).id;
+                        }
+                    }
+                }
             }
             else{
                 const targetStructure = Game.getObjectById(creep.memory.target);
