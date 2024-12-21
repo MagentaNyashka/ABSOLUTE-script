@@ -211,7 +211,7 @@ function render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHa
             ;
     const sources = global.getSources(room_spawn.room.name);
     for(let i = 0; i < sources.length; i++){
-        new RoomVisual(room_spawn.room.name).text(sources[0].energy + "/" + sources[0].energyCapacity, sources[i].pos.x+0.4, sources[i].pos.y+0.15, {align: 'left', color:'#dec15a', stroke: '#000000', strokeWidth: 0.1, font: 0.5});
+        new RoomVisual(room_spawn.room.name).text(sources[i].energy + "/" + sources[i].energyCapacity, sources[i].pos.x+0.4, sources[i].pos.y+0.15, {align: 'left', color:'#dec15a', stroke: '#000000', strokeWidth: 0.1, font: 0.5});
     }
 }
 function render(){
@@ -743,6 +743,7 @@ module.exports.loop = function() {
         }
     }
 render();
+global.cache = {};
 });
 }
     
