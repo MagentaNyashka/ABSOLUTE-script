@@ -1,10 +1,11 @@
 var roleHarvester = {
-    run: function(creep, Extantions, Spawns, Sources, Links, Containers, Towers, Terminals, Power_Spawns) {
+    run: function(creep) {
         const roomName = creep.room.name;
 
-        const energyStructures = Links.get(roomName).concat(Containers.get(roomName));
+        // const energyStructures = Links.get(roomName).concat(Containers.get(roomName));
+        const energyStructures = global.getCachedStructures(roomName, STRUCTURE_LINK);//.concat(global.getCachedStructures(roomName, STRUCTURE_CONTAINER));
 
-        const sources = Sources.get(roomName);
+        const sources = global.getSources(roomName);
 
         if (creep.memory.transferring && creep.store[RESOURCE_ENERGY] === 0) {
             creep.memory.transferring = false;
@@ -14,55 +15,57 @@ var roleHarvester = {
         }
 
         if (creep.memory.transferring) {
-            const transferTargets = Extantions.get(roomName)
-                .concat(Spawns.get(roomName))
-                .filter(structure => structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
-
-            if (transferTargets.length > 0 && energyStructures.length === 0) {
-                const target = creep.pos.findClosestByPath(transferTargets);
-                if (creep.transfer(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
-                }
-            } else if (energyStructures.length > 0) {
-                const closestEnergyStructure = creep.pos.findClosestByPath(energyStructures);
-                if (creep.transfer(closestEnergyStructure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(closestEnergyStructure, { visualizePathStyle: { stroke: '#ffffff' } });
-                }
-            } else {
-                const towers = Towers.get(roomName).filter(
-                    structure => structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-                );
-                if (towers.length > 0) {
-                    const closestTower = creep.pos.findClosestByPath(towers);
-                    if (creep.transfer(closestTower, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(closestTower, { visualizePathStyle: { stroke: '#ffffff' } });
-                    }
+            if (!creep.memory.target) {
+                const transferTargets = global.getCachedStructures(roomName, STRUCTURE_EXTENSION)
+                    .concat(global.getCachedStructures(roomName, STRUCTURE_SPAWN))
+                    .filter(structure => structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+            
+                if (transferTargets.length > 0 && energyStructures.length === 0) {
+                    creep.memory.target = creep.pos.findClosestByPath(transferTargets).id;
+                } else if (energyStructures.length > 0) {
+                    creep.memory.target = creep.pos.findClosestByPath(energyStructures).id;
                 } else {
-                    const otherTargets = Terminals.get(roomName)
-                        .concat(Power_Spawns.get(roomName))
-                        .filter(structure => structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
-                    if (otherTargets.length > 0) {
-                        const fallbackTarget = creep.pos.findClosestByPath(otherTargets);
-                        if (creep.transfer(fallbackTarget, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                            creep.moveTo(fallbackTarget, { visualizePathStyle: { stroke: '#ffffff' } });
+                    const towers = global.getCachedStructures(roomName, STRUCTURE_TOWER).filter(
+                        structure => structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+                    );
+                    if (towers.length > 0) {
+                        creep.memory.target = creep.pos.findClosestByPath(towers).id;
+                    } else {
+                        const otherTargets = creep.room.terminal
+                            .concat(global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN))
+                            .filter(structure => structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+                        if (otherTargets.length > 0) {
+                            creep.memory.target = creep.pos.findClosestByPath(otherTargets).id;
                         }
                     }
                 }
+            } else {
+                const targetStructure = Game.getObjectById(creep.memory.target);
+            
+                if (targetStructure) {
+                    if (creep.transfer(targetStructure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                        creep.moveTo(targetStructure, { visualizePathStyle: { stroke: '#ffffff' } });
+                    } else {
+                        delete creep.memory.target;
+                    }
+                } else {
+                    delete creep.memory.target;
+                }
+            }            
+        }else {
+                /*
+                const source = creep.pos.findClosestByPath(sources, {
+                    filter: s => s.energy > 0,
+                });
+                if (source && creep.harvest(source) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
+                }
+                */
+                if (creep.harvest(sources[0]) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(sources[0], { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10});
+                }
             }
-        } else {
-            /*
-            const source = creep.pos.findClosestByPath(sources, {
-                filter: s => s.energy > 0,
-            });
-            if (source && creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
-            }
-            */
-            if (creep.harvest(sources[0]) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(sources[0], { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10});
-            }
-        }
-    },
+        },
 };
 
 module.exports = roleHarvester;

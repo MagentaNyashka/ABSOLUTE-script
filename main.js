@@ -54,6 +54,7 @@ if(!global.cache){
 }
 
 //"CACHE"
+var bullasg = 'a';
 var my_spawns = [];
 Spawns = new Map();
 Terminals = new Map();
@@ -107,6 +108,7 @@ function CACHE_SPAWN() {
         }
     });
 }
+
 function CACHE() {
     _.forEach(my_spawns, function(room_spawn) {
         const activeStructures = room_spawn.room.find(FIND_STRUCTURES, {
@@ -129,6 +131,7 @@ function CACHE() {
         ConstructionSites.set(room_spawn.room.name, room_spawn.room.find(FIND_CONSTRUCTION_SITES) || []);
     });
 }
+
 function CACHE_CREEPS(room_spawn) {
     const creepsByRoom = Object.values(Game.creeps).filter(creep => creep.room.name === room_spawn.room.name);
 
@@ -293,6 +296,20 @@ global.getCachedStructures = function (roomName, structureType) {
 
     return global.cache[roomName][structureType];
 };
+
+global.getSources = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName].sources){
+        const sources = Game.rooms[roomName].find(FIND_SOURCES);
+        global.cache[roomName].sources = sources;
+    }
+    return global.cache[roomName].sources;
+}
 
 CACHE_SPAWN();
 CACHE();
@@ -559,14 +576,12 @@ module.exports.loop = function() {
             console.log("визуалки опять наебнулись");
             console.log(e);
         }
-        console.log(room_spawn.spawnCreep());
         if(room_spawn.spawnCreep() != 0){
             var spawn_list = global.getCachedStructures(roomName, STRUCTURE_SPAWN);
         }
         else{
             var spawn_list = room_spawn;
         }
-        console.log(spawn_list);
         CACHE_CREEPS(room_spawn);
 
         _.forEach(spawn_list, function(room_spawn){
@@ -699,7 +714,7 @@ module.exports.loop = function() {
     for(var name in Game.creeps) {
         var creep = Game.creeps[name];
         if(creep.memory.role == 'harvester') {
-            roleHarvester.run(creep, Extantions, Spawns, Sources, Links, Containers, Towers, Terminals, Power_Spawns);
+            roleHarvester.run(creep);
         }
         if(creep.memory.role == 'upgrader') {
             roleUpgrader.run(creep, Sources, Links, Containers, Terminals);
