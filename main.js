@@ -209,6 +209,10 @@ function render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHa
             .text('Builders ' + Builders.get(room_spawn.room.name).length + '/' + maxBuilders, 36, 6.2, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
             .text('Transferers ' + Transfers.get(room_spawn.room.name).length + '/' + maxTransferers, 36, 6.8, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
             ;
+    const sources = global.getSources(room_spawn.room.name)
+    for(let i = 0; i < sources.length; i++){
+        new RoomVisual(room_spawn.room.name).text(sources[0].energy + "/" + sources[0].energyCapacity, sources[i].pos.x+0.4, sources[i].pos.y+0.15, {align: 'left', color:'#dec15a', stroke: '#000000', strokeWidth: 0.1, font: 0.5});
+    }
 }
 function render(){
     const roomCount = Object.values(Game.rooms).filter(room => room.controller && room.controller.my).length;

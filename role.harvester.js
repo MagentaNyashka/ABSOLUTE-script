@@ -9,9 +9,11 @@ var roleHarvester = {
 
         if (creep.memory.transferring && creep.store[RESOURCE_ENERGY] === 0) {
             creep.memory.transferring = false;
+            delete creep.memory.target;
         }
         if (!creep.memory.transferring && (creep.store.getFreeCapacity() <= 10 || sources[0].energy === 0)) {
             creep.memory.transferring = true;
+            delete creep.memory.target;
         }
 
         if (creep.memory.transferring) {
