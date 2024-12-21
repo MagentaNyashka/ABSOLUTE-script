@@ -250,14 +250,6 @@ function roomPlanCacher(roomName){
     }
 }
 
-Object.defineProperty(Memory.cache, 'cacheStructures', {
-    value: function (roomName) {
-        roomPlanCacher(roomName);
-    },
-    enumerable: false,
-    configurable: true
-});
-
 
 CACHE_SPAWN();
 CACHE();
