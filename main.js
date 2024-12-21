@@ -286,7 +286,6 @@ global.getCachedStructures = function (roomName, structureType) {
                 structures.push(structure.structure);
             }
         }
-
         global.cache[roomName][structureType] = structures;
     }
     return global.cache[roomName][structureType];
