@@ -268,6 +268,7 @@ global.getCachedStructures = function (roomName, structureType) {
         global.cache[roomName] = {};
     }
     if (!global.cache[roomName][structureType]) {
+        console.log(`structure caching in progress for [${roomName}][${structureType}]...`);
         const encodedData = Memory.cache.roomPlan[roomName][structureType];
         if (!encodedData || encodedData === "0") {
             return [];
@@ -308,6 +309,7 @@ global.getSources = function(roomName){
         global.cache[roomName] = {};
     }
     if(!global.cache[roomName].sources){
+        console.log(`source caching in progress for [${roomName}]...`);
         const sources = Game.rooms[roomName].find(FIND_SOURCES);
         global.cache[roomName].sources = sources;
     }
