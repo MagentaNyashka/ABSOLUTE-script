@@ -96,6 +96,13 @@ function getControllerProgressBar(controller, length = 20) {
     }
     const progressTotal = controller.progressTotal || 1;
     const progressPercentage = Math.min(progress / progressTotal, 1);
+    if(!global.progressPercentage){
+        global.progressPercentage = {};
+    }
+    if(!global.progressPercentage[controller.room.name]){
+        global.progressPercentage[controller.room.name] = {};
+    }
+    global.progressPercentage[controller.room.name] = progressPercentage;
 
     const filledLength = Math.round(progressPercentage * length);
     const emptyLength = length - filledLength;
@@ -613,7 +620,7 @@ module.exports.loop = function() {
             var room_level = "L5";
             var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
             var maxHarvesters = 1;
-            var Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+            var Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
             var maxUpgraders = 1;
             var Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
             var maxBuilders = 1;
@@ -725,7 +732,7 @@ module.exports.loop = function() {
                 room_spawn.spawnCreep(Builder_BP, newBuilderName,
                     {memory: {role: 'builder'}});
             }
-            if(transfers.length < maxTransferers && harvesters.length == maxHarvesters && global.getConstructionSites(roomName, STRUCTURE_POWER_SPAWN).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+            if(transfers.length < maxTransferers && harvesters.length == maxHarvesters && global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
                 var newTransferName = 'T_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
                     {memory: {role: 'transfer'}});
@@ -853,7 +860,7 @@ module.exports.loop = function() {
             roleBuilderM.run(creep);
         }
         if(creep.memory.role == 'transfer') {
-            // roleTransfer.run(creep, Power_Spawns, Nukers, Terminals);
+            roleTransfer.run(creep);
         }
         if(creep.memory.role == 'zavodskoy') {
             roleZavodskoy.run(creep);

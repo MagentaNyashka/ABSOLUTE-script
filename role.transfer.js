@@ -1,46 +1,88 @@
 var roleTransfer = {
     run: function(creep, Power_Spawns, Nukers, Terminals) {
         const roomName = creep.room.name;
-        const power_spawn = Power_Spawns.get(creep.room.name);
-        const nuker = Nukers.get(creep.room.name).filter((structure) => structure.store.getFreeCapacity(RESOURCE_GHODIUM) >= creep.store.getFreeCapacity());
-        const terminal = Terminals.get(creep.room.name);
-
+        const power_spawn = global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN);
+        // const nuker = Nukers.get(creep.room.name).filter((structure) => structure.store.getFreeCapacity(RESOURCE_GHODIUM) >= creep.store.getFreeCapacity());
+        let nuker = global.getCachedStructures(roomName, STRUCTURE_NUKER);
+        if(nuker[0]){
+            if(!(nuker[0].store.getFreeCapacity(RESOURCE_GHODIUM) >= creep.store.getFreeCapacity())){
+                nuker = [];
+            }
+        }
+        const terminal = Game.rooms[roomName].terminal;
         if(creep.memory.transferring && (creep.store[RESOURCE_POWER] <= 0 && creep.store[RESOURCE_GHODIUM] <= 0 && creep.store[RESOURCE_ENERGY] <= 0) && creep.ticksToLive > 50){
             creep.memory.transferring = false;
+            delete creep.memory.resource;
+            delete creep.memory.target;
         }
         if(!creep.memory.transferring && (creep.store[RESOURCE_POWER] != 0 || creep.store[RESOURCE_GHODIUM] != 0 || creep.store[RESOURCE_ENERGY] != 0)){
-            creep.withdraw(terminal[0], RESOURCE_ENERGY);
+            creep.withdraw(terminal, RESOURCE_ENERGY);
             creep.memory.transferring = true;
+            delete creep.memory.resource;
+            delete creep.memory.target;
         }
         if(creep.memory.transferring){
-            if(creep.store[RESOURCE_GHODIUM] > 0){
-                if(creep.transfer(nuker[0], RESOURCE_GHODIUM) == ERR_NOT_IN_RANGE){
-                    creep.moveTo(nuker[0], {visualizePathStyle: {stroke: '#ffffff'}});
-                }
-            }
-            else{
-                if(creep.transfer(power_spawn[0], RESOURCE_POWER) == ERR_NOT_IN_RANGE || creep.transfer(power_spawn[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                    creep.moveTo(power_spawn[0], {visualizePathStyle: {stroke: '#ffffff'}});
-                }
-            } 
-        }
-        else{
-            if(nuker.length > 0){
-                if(creep.withdraw(terminal[0], RESOURCE_GHODIUM) == ERR_NOT_IN_RANGE){
-                    creep.moveTo(terminal[0], {visualizePathStyle: {stroke: '#ffffff'}});
-                }
-            }
-            else{
-                if(power_spawn[0].store.getFreeCapacity(RESOURCE_POWER) >= 10){
-                    if(creep.withdraw(terminal[0], RESOURCE_POWER, 10) == ERR_NOT_IN_RANGE){
-                        creep.moveTo(terminal[0], {visualizePathStyle: {stroke: '#ffffff'}});
-                    }
+            if(!creep.memory.target){
+                if(creep.store[RESOURCE_GHODIUM] > 0 && nuker.length > 0){
+                    creep.memory.target = nuker[0].id;
+                    creep.memory.resource = RESOURCE_GHODIUM;
                 }
                 else{
-                    if(creep.withdraw(terminal[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
-                        creep.moveTo(terminal[0], {visualizePathStyle: {stroke: '#ffffff'}});
+                    if(creep.store[RESOURCE_POWER] > 0){
+                        creep.memory.target = power_spawn[0].id;
+                        creep.memory.resource = RESOURCE_POWER;
+                    }
+                    else{
+                        creep.memory.target = power_spawn[0].id;
+                        creep.memory.resource = RESOURCE_ENERGY;
                     }
                 }
+            }
+            const targetStructure = Game.getObjectById(creep.memory.target);
+            if (targetStructure) {
+                new RoomVisual(roomName).circle(targetStructure.pos, {fill: '#ff0000', opacity: 0.5, radius: 0.55});
+                const status = creep.transfer(targetStructure, creep.memory.resource);
+                if(status === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
+                } else if(status === ERR_NOT_ENOUGH_RESOURCES){
+                    delete creep.memory.target;
+                    delete creep.memory.resource;
+                }
+            } else {
+                delete creep.memory.target;
+                delete creep.memory.resource;
+            }
+        }
+        else{
+            if(!creep.memory.target){
+                if(nuker.length > 0){
+                    creep.memory.target = terminal.id;
+                    creep.memory.resource = RESOURCE_GHODIUM;
+                }
+                else{
+                    if(power_spawn[0].store.getFreeCapacity(RESOURCE_POWER) >= 10){
+                        creep.memory.target = terminal.id;
+                        creep.memory.resource = RESOURCE_POWER;
+                    }
+                    else{
+                        creep.memory.target = terminal.id;
+                        creep.memory.resource = RESOURCE_ENERGY;
+                    }
+                }
+            }
+            const targetStructure = Game.getObjectById(creep.memory.target);
+            if (targetStructure) {
+                new RoomVisual(roomName).circle(targetStructure.pos, {fill: '#ff0000', opacity: 0.5, radius: 0.55});
+                const status = creep.withdraw(targetStructure, RESOURCE_ENERGY);
+                if(status === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
+                } else if(status === ERR_NOT_ENOUGH_RESOURCES){
+                    delete creep.memory.target;
+                    delete creep.memory.resource;
+                }
+            } else {
+                delete creep.memory.target;
+                delete creep.memory.resource;
             }
         }
     }
