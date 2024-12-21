@@ -82,6 +82,18 @@ Transfers = new Map();
 Centers = new Map();
 HarvesterUpgr = new Map();
 
+
+Object.defineProperty(Memory.cache.prototype, 'myCreeps', {
+    get: function () {
+        if (!this._myCreeps) {
+            this._myCreeps = this.find(FIND_CREEPS).filter((c) => c.my);
+        }
+        return this._myCreeps;
+    },
+    enumerable: false,
+    configurable: true
+});
+
 function trackAverageCPU() {
     const currentUsed = Game.cpu.getUsed();
 
