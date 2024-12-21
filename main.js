@@ -223,7 +223,7 @@ function render(){
     ;
 }
 
-Memory.roomPlanCacher = function(roomName){
+function roomPlanCacher(roomName){
     if (Game.time % 500 === 0) {
         if (!this.roomPlan) {
             this.roomPlan = {};
@@ -248,7 +248,7 @@ Memory.roomPlanCacher = function(roomName){
             Memory.cache.roomPlan[roomName][structureType] = map_codec.encode(positions);
         });
     }
-};
+}
 
 global.getCachedStructures = function (roomName, structureType) {
     if (!Memory.cache || !Memory.cache.roomPlan || !Memory.cache.roomPlan[roomName]) {
@@ -318,7 +318,7 @@ module.exports.loop = function() {
             CACHE_SPAWN();
         }
     _.forEach(my_spawns, function(room_spawn){
-        Memory.roomPlanCacher(room_spawn.room.name);
+        roomPlanCacher(room_spawn.room.name);
         CACHE();
         TowerCACHE(room_spawn);
 
