@@ -251,6 +251,29 @@ function roomPlanCacher(roomName){
 }
 
 
+global.getCachedStructures = function (roomName, structureType) {
+    if (!Memory.cache || !Memory.cache.roomPlan || !Memory.cache.roomPlan[roomName]) {
+        console.log(`No cached data available for room: ${roomName}`);
+        return [];
+    }
+
+    const encodedPositions = Memory.cache.roomPlan[roomName][structureType];
+    if (!encodedPositions) {
+        console.log(`No cached data for structure type: ${structureType} in room: ${roomName}`);
+        return [];
+    }
+
+    // Decode the positions
+    const map_codec = new utf15.Codec({ depth: 2, array: 1 });
+    try {
+        return map_codec.decode(encodedPositions);
+    } catch (error) {
+        console.log(`Error decoding positions for ${structureType}:`, error);
+        return [];
+    }
+};
+
+
 CACHE_SPAWN();
 CACHE();
 

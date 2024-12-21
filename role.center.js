@@ -1,10 +1,9 @@
 var roleCenter = {
     run: function(creep, Containers, dLinks, Extantions, Spawns, Towers, Nukers, Terminals, Storages) {
         const roomName = creep.room.name;
-        console.log(Memory.cache.roomPlan[roomName][STRUCTURE_EXTENSION]);
         //PRIORITY LIST:
         //EXT/SPAWN -> TOWERS -> NUKER -> STORAGE/TERMINAL
-
+        console.log(global.getCachedStructures(roomName, STRUCTURE_EXTENSION));
         if(creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0) {
             creep.memory.transferring = false;
         }
