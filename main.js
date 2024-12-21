@@ -83,10 +83,12 @@ Centers = new Map();
 HarvesterUpgr = new Map();
 
 
-Object.defineProperty(Memory.prototype, 'myCreeps', {
+Object.defineProperty(Memory.cache, 'myCreeps', {
     get: function () {
         if (!this._myCreeps) {
-            this._myCreeps = this.find(FIND_CREEPS).filter((c) => c.my);
+            // Example placeholder logic, as `Memory` doesn't have `find`
+            // This would work on game objects but not in `Memory`
+            this._myCreeps = Game.rooms['W8N3'].find(FIND_CREEPS).filter((c) => c.my);
         }
         return this._myCreeps;
     },
