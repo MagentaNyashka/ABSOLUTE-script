@@ -85,12 +85,24 @@ HarvesterUpgr = new Map();
 
 Object.defineProperty(Memory.cache, 'myCreeps', {
     get: function () {
-        if (!this._myCreeps) {
-            // Example placeholder logic, as `Memory` doesn't have `find`
-            // This would work on game objects but not in `Memory`
-            this._myCreeps = Game.rooms['W8N3'].find(FIND_CREEPS).filter((c) => c.my);
-        }
-        return this._myCreeps;
+        const self = this; // Reference to the `Memory.cache` object
+        return {
+            getForRoom: function (roomName) {
+                if (!self._myCreeps) {
+                    self._myCreeps = {};
+                }
+                if (!self._myCreeps[roomName]) {
+                    const room = Game.rooms[roomName];
+                    if (room) {
+                        self._myCreeps[roomName] = room.find(FIND_CREEPS).filter((c) => c.my);
+                    } else {
+                        console.log(`Room ${roomName} is not visible!`);
+                        self._myCreeps[roomName] = [];
+                    }
+                }
+                return self._myCreeps[roomName];
+            }
+        };
     },
     enumerable: false,
     configurable: true
