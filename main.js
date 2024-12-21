@@ -264,13 +264,10 @@ global.getCachedStructures = function (roomName, structureType) {
     if (!global.cache[roomName][structureType]) {
         const encodedData = Memory.cache.roomPlan[roomName][structureType];
         if (!encodedData) {
-            console.log(`No cached data for structure type: ${structureType} in room: ${roomName}`);
             return [];
         }
 
-        // Decode the coordinates
         const coordinates = map_codec.decode(encodedData);
-        console.log(`Decoded coordinates for ${structureType} in ${roomName}:`, coordinates);
 
         // Convert into coordinate pairs
         let coordinatePairs = [];
@@ -279,13 +276,10 @@ global.getCachedStructures = function (roomName, structureType) {
                 coordinatePairs.push({ x: coordinates[i], y: coordinates[i + 1] });
             }
         }
-        console.log('Coordinate pairs:', coordinatePairs);
 
-        // Look up structures at coordinates
         let structures = [];
         for (let i = 0; i < coordinatePairs.length; i++) {
             const lookAtResult = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y);
-            console.log(`LookAt result for (${coordinatePairs[i].x}, ${coordinatePairs[i].y}):`, lookAtResult);
 
             const structure = lookAtResult.find(
                 (s) => s.type === LOOK_STRUCTURES && s.structure.structureType === structureType
