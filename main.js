@@ -262,7 +262,6 @@ global.getCachedStructures = function (roomName, structureType) {
         global.cache[roomName] = {};
     }
     if (!global.cache[roomName][structureType]) {
-        const map_codec = new utf15.Codec({ depth: 2, array: 1 });
         const encodedData = Memory.cache.roomPlan[roomName][structureType];
         if (!encodedData) {
             console.log(`No cached data for structure type: ${structureType} in room: ${roomName}`);
