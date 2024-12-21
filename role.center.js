@@ -44,8 +44,8 @@ var roleCenter = {
                 }
             }
             const targetStructure = Game.getObjectById(creep.memory.target);
-            
             if (targetStructure) {
+                new RoomVisual(roomName).circle(targetStructure.pos, {fill: '#00ff00', opacity: 0.5, radius: 0.55});
                 const status = creep.transfer(targetStructure, RESOURCE_ENERGY);
                 if(status === ERR_NOT_IN_RANGE) {
                     creep.moveTo(targetStructure, { visualizePathStyle: { stroke: '#ffffff' } });
@@ -150,7 +150,7 @@ Cus I don’t want you hearing about me
                     creep.memory.target = creep.pos.findClosestByRange(sources).id;
                 }
                 else{
-                    const links = global.getCachedStructures(roomName, STRUCTURE_LINK);
+                    const links = global.getDestLinks(roomName);
                     const closestLink = creep.pos.findClosestByRange(links);
                     if(closestLink.store[RESOURCE_ENERGY] > 0){
                         creep.memory.target = closestLink.id;
@@ -164,8 +164,8 @@ Cus I don’t want you hearing about me
                 }
             }
             const targetStructure = Game.getObjectById(creep.memory.target);
-        
             if (targetStructure) {
+                new RoomVisual(roomName).circle(targetStructure.pos, {fill: '#ff0000', opacity: 0.5, radius: 0.55});
                 const status = creep.withdraw(targetStructure, RESOURCE_ENERGY);
                 if(status === ERR_NOT_IN_RANGE) {
                     creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});

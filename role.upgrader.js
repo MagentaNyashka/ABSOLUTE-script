@@ -15,6 +15,7 @@ var roleUpgrader = {
         }
         if(creep.memory.transferring && creep.room.controller.ticksToDowngrade <= 199990) {
             const status = creep.upgradeController(creep.room.controller);
+            new RoomVisual(roomName).circle(creep.room.controller.pos, {fill: '#00ff00', opacity: 0.5, radius: 0.55});
             if(status === ERR_NOT_IN_RANGE) {
                 creep.moveTo(creep.room.controller, {visualizePathStyle: {stroke: '#00ffff'}});
             }
@@ -26,15 +27,21 @@ var roleUpgrader = {
             }
             else{
                 const targetStructure = Game.getObjectById(creep.memory.target);
-                let status;
-                if(energyStructures.length != 0){
-                    status = creep.withdraw(targetStructure, RESOURCE_ENERGY)
-                }
-                else{
-                    status = creep.harvest(targetStructure);
-                }
-                if(status === ERR_NOT_IN_RANGE || status === ERR_NOT_ENOUGH_ENERGY){
-                    creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#00ffff'}, reusePath: 10});
+                if(targetStructure){
+                    new RoomVisual(roomName).circle(targetStructure.pos, {fill: '#ff0000', opacity: 0.5, radius: 0.55});
+                    let status;
+                    if(energyStructures.length != 0){
+                        status = creep.withdraw(targetStructure, RESOURCE_ENERGY)
+                    }
+                    else{
+                        status = creep.harvest(targetStructure);
+                    }
+                    if(status === ERR_NOT_IN_RANGE || status === ERR_NOT_ENOUGH_ENERGY){
+                        creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#00ffff'}, reusePath: 10});
+                    }
+                    else{
+                        delete creep.memory.target;
+                    }
                 }
                 else{
                     delete creep.memory.target;

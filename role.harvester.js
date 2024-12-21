@@ -45,6 +45,7 @@ var roleHarvester = {
             const targetStructure = Game.getObjectById(creep.memory.target);
         
             if (targetStructure) {
+                new RoomVisual(roomName).circle(targetStructure.pos, {fill: '#00ff00', opacity: 0.5, radius: 0.55});
                 if (creep.transfer(targetStructure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(targetStructure, { visualizePathStyle: { stroke: '#ffffff' } });
                 } else {
@@ -54,6 +55,7 @@ var roleHarvester = {
                 delete creep.memory.target;
             }    
         }else {
+            new RoomVisual(roomName).circle(sources[0].pos, {fill: '#ffff00', opacity: 0.5, radius: 0.55});
             if (creep.harvest(sources[0]) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(sources[0], { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10});
             }

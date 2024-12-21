@@ -41,6 +41,8 @@ const STRUCTURE_TYPES = [
     STRUCTURE_INVADER_CORE,
 ];
 
+const SLINK = "sourceLinks";
+const DLINK = "destinationLinks";
 
 var price_old = -100;
 var price_old_x = -100;
@@ -85,15 +87,40 @@ function trackAverageCPU() {
 
     return `${Memory.cpuStats.average.toFixed(2)}`;
 }
+function getControllerProgressBar(controller, length = 20) {
+    if (!controller) return "No Controller";
+
+    let progress = controller.progress || 0;
+    if(controller.level == 8){
+        progress = 1;
+    }
+    const progressTotal = controller.progressTotal || 1;
+    const progressPercentage = Math.min(progress / progressTotal, 1);
+
+    const filledLength = Math.round(progressPercentage * length);
+    const emptyLength = length - filledLength;
+
+    const filledBar = "█".repeat(filledLength);
+    const emptyBar = "-".repeat(emptyLength);
+
+    return `[${filledBar}${emptyBar}] ${(progressPercentage * 100).toFixed(2)}% \t ${progress}/${progressTotal}`;
+}
+function clearConsole(lines = 50) {
+    for (let i = 0; i < lines; i++) {
+        console.log(" ");
+    }
+}
 
 function CACHE_SPAWN() {
-    my_spawns = [];
-    _.forEach(Game.rooms, function(room) {
-        let spawn = room.find(FIND_MY_SPAWNS)[0];
-        if (spawn) {
-            my_spawns.push(spawn);
-        }
-    });
+    if(Game.time % 500){
+        my_spawns = [];
+        _.forEach(Game.rooms, function(room) {
+            let spawn = room.find(FIND_MY_SPAWNS)[0];
+            if (spawn) {
+                my_spawns.push(spawn);
+            }
+        });
+    }
 }
 
 function CACHE_CREEPS(room_spawn) {
@@ -144,25 +171,6 @@ function TowerCACHE(room_spawn){
     DamagedStructures.set(room_spawn.room.name, damagedStructures);
     DamagedWalls.set(room_spawn.room.name, damagedStructures);
 }
-function CACHE_LINKS(room_spawn){
-        var sources = global.getSources(room_spawn.room.name);
-        var links = global.getCachedStructures(room_spawn.room.name, STRUCTURE_LINK);
-        var source_links = [];
-        var destination_links = [];
-
-        _.forEach(links, function(link) {
-            var closest_source = link.pos.findClosestByRange(sources);
-            if (link.pos.getRangeTo(closest_source) < 3) {
-                source_links.push(link);
-            } else {
-                destination_links.push(link);
-            }
-        });
-        dLinks.set(room_spawn.room.name, destination_links);
-        sLinks.set(room_spawn.room.name, source_links);
-
-}
-
 
 function render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHarvestersUpgr, maxTransferers, maxCenters){
     const roomName = room_spawn.room.name;
@@ -177,8 +185,16 @@ function render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHa
             ;
     const sources = global.getSources(room_spawn.room.name);
     for(let i = 0; i < sources.length; i++){
-        new RoomVisual(room_spawn.room.name).text(sources[i].energy + "/" + sources[i].energyCapacity, sources[i].pos.x+0.4, sources[i].pos.y+0.15, {align: 'left', color:'#dec15a', stroke: '#000000', strokeWidth: 0.1, font: 0.5});
+        new RoomVisual(room_spawn.room.name).text(sources[i].energy + "/" + sources[i].energyCapacity, sources[i].pos.x+0.6, sources[i].pos.y+0.15, {align: 'left', color:'#dec15a', stroke: '#000000', strokeWidth: 0.1, font: 0.5})
+        .text(sources[i].ticksToRegeneration, sources[i].pos.x-0.6, sources[i].pos.y+0.15, {align: 'right', color:'#dec15a', stroke: '#000000', strokeWidth: 0.1, font: 0.5})
+        ;
     }
+    const percentage = room_spawn.room.controller.progress/room_spawn.room.controller.progressTotal*100;
+    new RoomVisual(roomName).text(room_spawn.room.controller.progress + "/" + room_spawn.room.controller.progressTotal, room_spawn.room.controller.pos.x+0.7, room_spawn.room.controller.pos.y+0.15, {align: 'left', color:'#ffffff', stroke: '#000000', strokeWidth: 0.1, font: 0.5})
+    .text(percentage.toFixed(2) + "%", room_spawn.room.controller.pos.x+0.7, room_spawn.room.controller.pos.y+0.75, {align: 'left', color:'#ffffff', stroke: '#000000', strokeWidth: 0.1, font: 0.5})
+    ;
+
+    console.log(`${roomName} ${getControllerProgressBar(room_spawn.room.controller)}`);
 }
 function render(){
     const roomCount = Object.values(Game.rooms).filter(room => room.controller && room.controller.my).length;
@@ -224,7 +240,7 @@ function roomPlanCacher(roomName){
 
 global.getCachedStructures = function (roomName, structureType) {
     if (!Memory.cache || !Memory.cache.roomPlan || !Memory.cache.roomPlan[roomName]) {
-        console.log(`No cached data available for room: ${roomName}`);
+        // console.log(`No cached data available for room: ${roomName}`);
         return [];
     }
     if (!global.cache) {
@@ -234,7 +250,7 @@ global.getCachedStructures = function (roomName, structureType) {
         global.cache[roomName] = {};
     }
     if (!global.cache[roomName][structureType]) {
-        console.log(`structure caching in progress for [${roomName}][${structureType}]...`);
+        // console.log(`structure caching in progress for [${roomName}][${structureType}]...`);
         const encodedData = Memory.cache.roomPlan[roomName][structureType];
         if (!encodedData || encodedData === "0") {
             return [];
@@ -275,12 +291,12 @@ global.getSources = function(roomName){
         global.cache[roomName] = {};
     }
     if(!global.cache[roomName].sources){
-        console.log(`source caching in progress for [${roomName}]...`);
+        // console.log(`source caching in progress for [${roomName}]...`);
         const sources = Game.rooms[roomName].find(FIND_SOURCES);
         global.cache[roomName].sources = sources;
     }
     return global.cache[roomName].sources;
-}
+};
 
 global.getConstructionSites = function(roomName){
     if(!global.cache){
@@ -290,17 +306,139 @@ global.getConstructionSites = function(roomName){
         global.cache[roomName] = {};
     }
     if(!global.cache[roomName].constructionSites){
-        console.log(`constr_site caching in progress for [${roomName}]...`);
+        // console.log(`constr_site caching in progress for [${roomName}]...`);
         const constructionSites = Game.rooms[roomName].find(FIND_CONSTRUCTION_SITES);
         global.cache[roomName].constructionSites = constructionSites;
     }
     return global.cache[roomName].constructionSites;
 }
 
+function roomLinksCacher(roomName){
+    if(Game.time % 500 === 0){
+        if (!this.roomPlan) {
+            this.roomPlan = {};
+        }
+        if (!this.roomPlan[roomName]) {
+            this.roomPlan[roomName] = {};
+        }
+        const sources = global.getSources(roomName);
+        const links = global.getCachedStructures(roomName, STRUCTURE_LINK);
+        let source_links = [];
+        let destination_links = [];
+
+        _.forEach(links, function(link) {
+            var closest_source = link.pos.findClosestByRange(sources);
+            if (link.pos.getRangeTo(closest_source) < 3) {
+                source_links.push(link);
+            } else {
+                destination_links.push(link);
+            }
+        });
+        let sPositions = [];
+        let dPositions = [];
+        _.forEach(source_links, function (sLink) {
+            const valuesX = sLink.pos.x;
+            const valuesY = sLink.pos.y;
+            sPositions.push(valuesX);
+            sPositions.push(valuesY);
+        });
+        _.forEach(destination_links, function (dLink) {
+            const valuesX = dLink.pos.x;
+            const valuesY = dLink.pos.y;
+            dPositions.push(valuesX);
+            dPositions.push(valuesY);
+        });
+
+        Memory.cache.roomPlan[roomName][SLINK] = map_codec.encode(sPositions);
+        Memory.cache.roomPlan[roomName][DLINK] = map_codec.encode(dPositions);
+    }
+}
+
+global.getDestLinks = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName].dLinks){
+        const encodedData = Memory.cache.roomPlan[roomName][DLINK];
+        if (!encodedData || encodedData === "0") {
+            return [];
+        }
+
+        const coordinates = map_codec.decode(encodedData);
+
+        let coordinatePairs = [];
+        for (let i = 0; i < coordinates.length; i += 2) {
+            if (coordinates[i + 1] !== undefined) {
+                coordinatePairs.push({ x: coordinates[i], y: coordinates[i + 1] });
+            }
+        }
+
+        let structures = [];
+        for (let i = 0; i < coordinatePairs.length; i++) {
+            const lookAtResult = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y);
+
+            const structure = lookAtResult.find(
+                (s) => s.type === LOOK_STRUCTURES && s.structure.structureType === STRUCTURE_LINK
+            );
+            if (structure) {
+                structures.push(structure.structure);
+            }
+        }
+
+        global.cache[roomName][DLINK] = structures;
+    }
+
+    return global.cache[roomName][DLINK];
+};
+
+global.getSourceLinks = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName].sLinks){
+        const encodedData = Memory.cache.roomPlan[roomName][SLINK];
+        if (!encodedData || encodedData === "0") {
+            return [];
+        }
+
+        const coordinates = map_codec.decode(encodedData);
+
+        let coordinatePairs = [];
+        for (let i = 0; i < coordinates.length; i += 2) {
+            if (coordinates[i + 1] !== undefined) {
+                coordinatePairs.push({ x: coordinates[i], y: coordinates[i + 1] });
+            }
+        }
+
+        let structures = [];
+        for (let i = 0; i < coordinatePairs.length; i++) {
+            const lookAtResult = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y);
+
+            const structure = lookAtResult.find(
+                (s) => s.type === LOOK_STRUCTURES && s.structure.structureType === STRUCTURE_LINK
+            );
+            if (structure) {
+                structures.push(structure.structure);
+            }
+        }
+
+        global.cache[roomName][SLINK] = structures;
+    }
+
+    return global.cache[roomName][SLINK];
+};
+
 CACHE_SPAWN();
 
 profiler.enable();
 module.exports.loop = function() {
+    clearConsole();
     profiler.wrap(function() {
     Game.cpu.generatePixel();
     
@@ -310,13 +448,12 @@ module.exports.loop = function() {
             delete Memory.creeps[name];
         }
     }
-    
-    if(Game.time % 1 == 0){
-        CACHE_SPAWN();
-    }
+    CACHE_SPAWN();
+    console.log(`############### ROOM INFO ###############`);
     _.forEach(my_spawns, function(room_spawn){
-        const roomName = room_spawn.room.name; 
+        const roomName = room_spawn.room.name;
         roomPlanCacher(roomName);
+        roomLinksCacher(roomName);
         TowerCACHE(room_spawn);
 
         //towers
@@ -349,9 +486,8 @@ module.exports.loop = function() {
         //links
         //roomPlanCacher(room_spawn.room.name);
 
-        CACHE_LINKS(room_spawn);
-        const source_links = sLinks.get(room_spawn.room.name);
-        const destination_links = dLinks.get(room_spawn.room.name).sort(function(a,b){return b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY];});
+        const source_links = global.getSourceLinks(roomName);
+        const destination_links = global.getDestLinks(roomName).sort(function(a,b){return b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY];});
 
         _.forEach(source_links, function(link){
             if(destination_links.length > 0){
@@ -687,7 +823,7 @@ module.exports.loop = function() {
                         }
     
             });  }  
-            
+
             });
 
     for(var name in Game.creeps) {
