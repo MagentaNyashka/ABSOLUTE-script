@@ -256,19 +256,25 @@ global.getCachedStructures = function (roomName, structureType) {
         console.log(`No cached data available for room: ${roomName}`);
         return [];
     }
-
-    const encodedPositions = Memory.cache.roomPlan[roomName][structureType];
-    if (!encodedPositions) {
-        console.log(`No cached data for structure type: ${structureType} in room: ${roomName}`);
-        return [];
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
     }
-
-    try {
-        return map_codec.decode(encodedPositions);
-    } catch (error) {
-        console.log(`Error decoding positions for ${structureType}:`, error);
-        return [];
+    if(!global.cache[roomName][structureType]){
+        const coordinates = map_codec.decode(Memory.cache.roomPlan[roomName][structureType]);
+        let coordinatePairs = [];
+        for (let i = 0; i < coordinates.length; i += 2) {
+            if (coordinates[i + 1] !== undefined) {
+                coordinatePairs.push({ x: coordinates[i], y: coordinates[i + 1] });
+            }
+        }
+        let structures = [];
+        for(let i = 0; i < coordinatePairs.length; i++){
+            let structure = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y).find((s) => s.structureType === structureType);
+            structures.push(structure);
+        }
+        global.cache[roomName][structureType] = structures;
     }
+    return global.cache[roomName][structureType];
 };
 
 
