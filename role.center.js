@@ -44,9 +44,10 @@ var roleCenter = {
                 }
             } else {
                 const targetStructure = Game.getObjectById(creep.memory.target);
-            
+                
                 if (targetStructure) {
-                    if (creep.transfer(targetStructure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    const status = creep.transfer(targetStructure, RESOURCE_ENERGY)
+                    if(status === ERR_NOT_IN_RANGE) {
                         creep.moveTo(targetStructure, { visualizePathStyle: { stroke: '#ffffff' } });
                     } else {
                         delete creep.memory.target;
