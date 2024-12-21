@@ -248,7 +248,7 @@ Memory.roomPlanCacher = function(roomName){
             Memory.cache.roomPlan[roomName][structureType] = map_codec.encode(positions);
         });
     }
-}
+};
 
 global.getCachedStructures = function (roomName, structureType) {
     if (!Memory.cache || !Memory.cache.roomPlan || !Memory.cache.roomPlan[roomName]) {
