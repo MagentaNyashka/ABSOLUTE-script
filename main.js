@@ -263,8 +263,6 @@ global.getCachedStructures = function (roomName, structureType) {
         return [];
     }
 
-    // Decode the positions
-    const map_codec = new utf15.Codec({ depth: 2, array: 1 });
     try {
         return map_codec.decode(encodedPositions);
     } catch (error) {
