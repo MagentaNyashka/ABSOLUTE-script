@@ -224,7 +224,7 @@ function render(){
 }
 
 function roomPlanCacher(roomName){
-    if (Game.time % 5 === 0) {
+    if (Game.time % 500 === 0) {
         if (!this.roomPlan) {
             this.roomPlan = {};
         }
@@ -319,6 +319,7 @@ module.exports.loop = function() {
             CACHE_SPAWN();
         }
     _.forEach(my_spawns, function(room_spawn){
+        roomPlanCacher(room_spawn.room.name);
         CACHE();
         TowerCACHE(room_spawn);
 
