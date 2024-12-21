@@ -256,22 +256,37 @@ global.getCachedStructures = function (roomName, structureType) {
         console.log(`No cached data available for room: ${roomName}`);
         return [];
     }
-    if(!global.cache[roomName]){
+    if (!global.cache) {
+        global.cache = {};
+    }
+    if (!global.cache[roomName]) {
         global.cache[roomName] = {};
     }
-    if(!global.cache[roomName][structureType]){
-        const coordinates = map_codec.decode(Memory.cache.roomPlan[roomName][structureType]);
+    if (!global.cache[roomName][structureType]) {
+        const map_codec = new utf15.Codec({ depth: 2, array: 1 });
+        const encodedData = Memory.cache.roomPlan[roomName][structureType];
+        if (!encodedData) {
+            console.log(`No cached data for structure type: ${structureType} in room: ${roomName}`);
+            return [];
+        }
+
+        const coordinates = map_codec.decode(encodedData);
         let coordinatePairs = [];
         for (let i = 0; i < coordinates.length; i += 2) {
             if (coordinates[i + 1] !== undefined) {
                 coordinatePairs.push({ x: coordinates[i], y: coordinates[i + 1] });
             }
         }
+
         let structures = [];
-        for(let i = 0; i < coordinatePairs.length; i++){
-            let structure = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y).find((s) => s.structureType === structureType);
-            structures.push(structure);
+        for (let i = 0; i < coordinatePairs.length; i++) {
+            const lookAtResult = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y);
+            const structure = lookAtResult.find((s) => s.type === LOOK_STRUCTURES && s.structure.structureType === structureType);
+            if (structure) {
+                structures.push(structure.structure);
+            }
         }
+
         global.cache[roomName][structureType] = structures;
     }
     return global.cache[roomName][structureType];
