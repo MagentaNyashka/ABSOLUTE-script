@@ -314,7 +314,7 @@ module.exports.loop = function() {
         }
 
         //links
-        roomPlanCacher(room_spawn.room.name);
+        //roomPlanCacher(room_spawn.room.name);
 
         CACHE_LINKS(room_spawn);
         const source_links = sLinks.get(room_spawn.room.name);
