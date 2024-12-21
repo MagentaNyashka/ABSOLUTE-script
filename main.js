@@ -83,31 +83,6 @@ Centers = new Map();
 HarvesterUpgr = new Map();
 
 
-Object.defineProperty(Memory.cache, 'myCreeps', {
-    get: function () {
-        const self = this; // Reference to the `Memory.cache` object
-        return {
-            getForRoom: function (roomName) {
-                if (!self._myCreeps) {
-                    self._myCreeps = {};
-                }
-                if (!self._myCreeps[roomName]) {
-                    const room = Game.rooms[roomName];
-                    if (room) {
-                        self._myCreeps[roomName] = room.find(FIND_CREEPS).filter((c) => c.my);
-                    } else {
-                        console.log(`Room ${roomName} is not visible!`);
-                        self._myCreeps[roomName] = [];
-                    }
-                }
-                return self._myCreeps[roomName];
-            }
-        };
-    },
-    enumerable: false,
-    configurable: true
-});
-
 function trackAverageCPU() {
     const currentUsed = Game.cpu.getUsed();
 
@@ -275,8 +250,11 @@ function roomPlanCacher(roomName){
     }
 }
 
-
-
+Object.defineProperties(Memory.cache, 'cacheStructures', {
+    run: function(roomName){
+        roomPlanCacher(roomName);
+    }
+})
 
 
 CACHE_SPAWN();
