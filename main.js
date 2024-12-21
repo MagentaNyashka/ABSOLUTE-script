@@ -254,8 +254,8 @@ Object.defineProperty(Memory.cache, 'cacheStructures', {
     value: function (roomName) {
         roomPlanCacher(roomName);
     },
-    enumerable: false, // Prevents it from appearing in loops over Memory.cache
-    configurable: true // Allows redefinition of the property if needed
+    enumerable: false,
+    configurable: true
 });
 
 
