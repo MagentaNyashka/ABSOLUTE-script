@@ -559,7 +559,7 @@ module.exports.loop = function() {
             console.log("визуалки опять наебнулись");
             console.log(e);
         }
-            
+        console.log(room_spawn.spawnCreep());
         if(room_spawn.spawnCreep() != 0){
             var spawn_list = global.getCachedStructures(roomName, STRUCTURE_SPAWN);
         }
