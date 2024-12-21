@@ -250,11 +250,13 @@ function roomPlanCacher(roomName){
     }
 }
 
-Object.defineProperties(Memory.cache, 'cacheStructures', {
-    run: function(roomName){
+Object.defineProperty(Memory.cache, 'cacheStructures', {
+    value: function (roomName) {
         roomPlanCacher(roomName);
-    }
-})
+    },
+    enumerable: false, // Prevents it from appearing in loops over Memory.cache
+    configurable: true // Allows redefinition of the property if needed
+});
 
 
 CACHE_SPAWN();
