@@ -281,7 +281,7 @@ global.getCachedStructures = function (roomName, structureType) {
         let structures = [];
         for (let i = 0; i < coordinatePairs.length; i++) {
             const structure = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y).find((s) => s.type === LOOK_STRUCTURES && s.structure.structureType === structureType);
-            console.log(structure);
+            console.log(structure[0]);
             if (structure) {
                 structures.push(structure.structure);
             }
