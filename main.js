@@ -223,7 +223,7 @@ function render(){
     ;
 }
 
-function roomPlanCacher(roomName){
+Memory.roomPlanCacher = function(roomName){
     if (Game.time % 500 === 0) {
         if (!this.roomPlan) {
             this.roomPlan = {};
@@ -269,7 +269,6 @@ global.getCachedStructures = function (roomName, structureType) {
 
         const coordinates = map_codec.decode(encodedData);
 
-        // Convert into coordinate pairs
         let coordinatePairs = [];
         for (let i = 0; i < coordinates.length; i += 2) {
             if (coordinates[i + 1] !== undefined) {
@@ -319,7 +318,7 @@ module.exports.loop = function() {
             CACHE_SPAWN();
         }
     _.forEach(my_spawns, function(room_spawn){
-        roomPlanCacher(room_spawn.room.name);
+        Memory.roomPlanCacher(room_spawn.room.name);
         CACHE();
         TowerCACHE(room_spawn);
 
