@@ -55,20 +55,8 @@ if(!global.cache){
 
 //"CACHE"
 var my_spawns = [];
-Spawns = new Map();
-Terminals = new Map();
-Towers = new Map();
-Extantions = new Map();
-Power_Spawns = new Map();
-Sources = new Map();
-Containers = new Map();
-Links = new Map();
 dLinks = new Map();
 sLinks = new Map();
-Nukers = new Map();
-Storages = new Map();
-
-ConstructionSites = new Map();
 
 Enemies = new Map();
 DamagedStructures = new Map();
@@ -105,29 +93,6 @@ function CACHE_SPAWN() {
         if (spawn) {
             my_spawns.push(spawn);
         }
-    });
-}
-
-function CACHE() {
-    _.forEach(my_spawns, function(room_spawn) {
-        const activeStructures = room_spawn.room.find(FIND_STRUCTURES, {
-            filter: structure => structure.isActive(),
-        });
-
-        const grouped = _.groupBy(activeStructures, s => s.structureType);
-
-        Spawns.set(room_spawn.room.name, grouped[STRUCTURE_SPAWN] || []);
-        Terminals.set(room_spawn.room.name, grouped[STRUCTURE_TERMINAL] || []);
-        Towers.set(room_spawn.room.name, grouped[STRUCTURE_TOWER] || []);
-        Extantions.set(room_spawn.room.name, grouped[STRUCTURE_EXTENSION] || []);
-        Power_Spawns.set(room_spawn.room.name, grouped[STRUCTURE_POWER_SPAWN] || []);
-        Links.set(room_spawn.room.name, grouped[STRUCTURE_LINK] || []);
-        Containers.set(room_spawn.room.name, grouped[STRUCTURE_CONTAINER] || []);
-        Nukers.set(room_spawn.room.name, grouped[STRUCTURE_NUKER] || []);
-        Storages.set(room_spawn.room.name, grouped[STRUCTURE_STORAGE] || []);
-
-        Sources.set(room_spawn.room.name, room_spawn.room.find(FIND_SOURCES) || []);
-        ConstructionSites.set(room_spawn.room.name, room_spawn.room.find(FIND_CONSTRUCTION_SITES) || []);
     });
 }
 
@@ -180,8 +145,8 @@ function TowerCACHE(room_spawn){
     DamagedWalls.set(room_spawn.room.name, damagedStructures);
 }
 function CACHE_LINKS(room_spawn){
-        var sources = Sources.get(room_spawn.room.name);
-        var links = Links.get(room_spawn.room.name);
+        var sources = global.getSources(room_spawn.room.name);
+        var links = global.getCachedStructures(room_spawn.room.name, STRUCTURE_LINK);
         var source_links = [];
         var destination_links = [];
 
@@ -200,9 +165,10 @@ function CACHE_LINKS(room_spawn){
 
 
 function render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHarvestersUpgr, maxTransferers, maxCenters){
-    new RoomVisual(room_spawn.room.name)
-            .text('Sources ' + room_spawn.room.find(FIND_SOURCES).length, 36, 3.2, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-            .text('Extentions ' + Extantions.get(room_spawn.room.name).length, 36, 3.8, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
+    const roomName = room_spawn.room.name;
+    new RoomVisual(roomName)
+            .text('Sources ' + global.getSources(roomName).length, 36, 3.2, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
+            .text('Extentions ' + global.getCachedStructures(roomName, STRUCTURE_EXTENSION).length, 36, 3.8, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
             .text('Harvesters ' + Harvesters.get(room_spawn.room.name).length + '(' + ReserveHarvesters.get(room_spawn.room.name).length + ')' + '/' + maxHarvesters + '+' + HarvesterUpgr.get(room_spawn.room.name).length + "/" + maxHarvestersUpgr, 36, 4.4, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
             .text('Upgraders ' + Upgraders.get(room_spawn.room.name).length + '/' + maxUpgraders, 36, 5, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
             .text('Centers ' + Centers.get(room_spawn.room.name).length + '/' + maxCenters, 36, 5.6, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
@@ -316,8 +282,22 @@ global.getSources = function(roomName){
     return global.cache[roomName].sources;
 }
 
+global.getConstructionSites = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName].constructionSites){
+        console.log(`constr_site caching in progress for [${roomName}]...`);
+        const constructionSites = Game.rooms[roomName].find(FIND_CONSTRUCTION_SITES);
+        global.cache[roomName].constructionSites = constructionSites;
+    }
+    return global.cache[roomName].constructionSites;
+}
+
 CACHE_SPAWN();
-CACHE();
 
 profiler.enable();
 module.exports.loop = function() {
@@ -331,35 +311,34 @@ module.exports.loop = function() {
         }
     }
     
-        if(Game.time % 1 == 0){
-            CACHE_SPAWN();
-        }
+    if(Game.time % 1 == 0){
+        CACHE_SPAWN();
+    }
     _.forEach(my_spawns, function(room_spawn){
         const roomName = room_spawn.room.name; 
         roomPlanCacher(roomName);
-        CACHE();
         TowerCACHE(room_spawn);
 
         //towers
         try{
-        
-        _.forEach(Towers.get(room_spawn.room.name), function(tower){
-            if(DamagedStructures.get(room_spawn.room.name).length > 0){
-            var closestDamagedStructure = tower.pos.findClosestByRange(DamagedStructures.get(room_spawn.room.name));
-            var closestDamagedWall = tower.pos.findClosestByRange(DamagedWalls.get(room_spawn.room.name));
-            if(closestDamagedStructure || closestDamagedWall) {
-                if(tower.store[RESOURCE_ENERGY] > 0){
-                    tower.repair(closestDamagedStructure);
-                    if(!closestDamagedStructure && tower.store[RESOURCE_ENERGY] > 200){
-                        tower.repair(closestDamagedWall);
+        _.forEach(global.getCachedStructures(roomName, STRUCTURE_TOWER), function(tower){
+            if(Enemies.get(room_spawn.room.name).length > 0) {
+                var closestHostile = tower.pos.findClosestByRange(Enemies.get(room_spawn.room.name));
+                    tower.attack(closestHostile);
+            }else{
+                if(DamagedStructures.get(room_spawn.room.name).length > 0){
+                    var closestDamagedStructure = tower.pos.findClosestByRange(DamagedStructures.get(room_spawn.room.name));
+                    var closestDamagedWall = tower.pos.findClosestByRange(DamagedWalls.get(room_spawn.room.name));
+                    if(closestDamagedStructure || closestDamagedWall) {
+                        if(tower.store[RESOURCE_ENERGY] > 0){
+                            tower.repair(closestDamagedStructure);
+                            if(!closestDamagedStructure && tower.store[RESOURCE_ENERGY] > 200){
+                                tower.repair(closestDamagedWall);
+                            }
+                        }
                     }
                 }
             }
-        }
-        if(Enemies.get(room_spawn.room.name).length > 0) {
-        var closestHostile = tower.pos.findClosestByRange(Enemies.get(room_spawn.room.name));
-            tower.attack(closestHostile);
-        }
         });
         } catch(e){
             console.log("Tower error");
@@ -389,7 +368,7 @@ module.exports.loop = function() {
         if(power_spawn.length > 0){
             power_spawn[0].processPower();
         }
-
+        const Extensions = global.getCachedStructures(roomName, STRUCTURE_EXTENSION);
         {
         var room_level = "L0";
         var Harvester_BP = [WORK,CARRY,MOVE];
@@ -414,7 +393,7 @@ module.exports.loop = function() {
         var Builder_M_BP = [WORK,CARRY,MOVE];
         }
 
-        if(Extantions.get(room_spawn.room.name).length < 5){
+        if(Extensions.length < 5){
             var room_level = "L1";
             var Harvester_BP = [WORK,WORK,CARRY,MOVE];
             var maxHarvesters = 3;
@@ -433,7 +412,7 @@ module.exports.loop = function() {
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
-        if(Extantions.get(room_spawn.room.name).length < 10 && Extantions.get(room_spawn.room.name).length >= 5){
+        if(Extensions.length < 10 && Extensions.length >= 5){
             var room_level = "L2";
             var Harvester_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
             var maxHarvesters = 1;
@@ -452,7 +431,7 @@ module.exports.loop = function() {
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
-        if(Extantions.get(room_spawn.room.name).length < 20 && Extantions.get(room_spawn.room.name).length >= 10){
+        if(Extensions.length < 20 && Extensions.length >= 10){
             var room_level = "L3";
             var Harvester_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
             var maxHarvesters = 2;
@@ -471,7 +450,7 @@ module.exports.loop = function() {
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
-        if(Extantions.get(room_spawn.room.name).length < 30 && Extantions.get(room_spawn.room.name).length >= 20){
+        if(Extensions.length < 30 && Extensions.length >= 20){
             var room_level = "L4";
             var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
             var maxHarvesters = 2;
@@ -494,7 +473,7 @@ module.exports.loop = function() {
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
-        if(Extantions.get(room_spawn.room.name).length < 40 && Extantions.get(room_spawn.room.name).length >= 30){
+        if(Extensions.length < 40 && Extensions.length >= 30){
             var room_level = "L5";
             var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
             var maxHarvesters = 1;
@@ -513,7 +492,7 @@ module.exports.loop = function() {
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
-        if(Extantions.get(room_spawn.room.name).length < 50 && Extantions.get(room_spawn.room.name).length >= 40){
+        if(Extensions.length < 50 && Extensions.length >= 40){
             var room_level = "L6";
             var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
             var maxHarvesters = 1;
@@ -532,7 +511,7 @@ module.exports.loop = function() {
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
-        if(Extantions.get(room_spawn.room.name).length < 60 && Extantions.get(room_spawn.room.name).length >= 50 ){
+        if(Extensions.length < 60 && Extensions.length >= 50 ){
             var room_level = "L7";
             var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
             var maxHarvesters = 1;
@@ -551,7 +530,7 @@ module.exports.loop = function() {
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
-        if(Extantions.get(room_spawn.room.name).length >= 60 ){
+        if(Extensions.length >= 60 ){
             var room_level = "L8";
             var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
             var maxHarvesters = 1;
@@ -605,7 +584,7 @@ module.exports.loop = function() {
                 room_spawn.spawnCreep(Ugrader_BP, newUpgraderName,
                     {memory: {role: 'upgrader'}});
             }
-            if(builders.length < maxBuilders && harvesters.length == maxHarvesters && ConstructionSites.get(room_spawn.room.name).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+            if(builders.length < maxBuilders && harvesters.length == maxHarvesters && global.getConstructionSites(room_spawn.room.name).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
                 var newBuilderName = 'B_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 room_spawn.spawnCreep(Builder_BP, newBuilderName,
                     {memory: {role: 'builder'}});
@@ -615,12 +594,12 @@ module.exports.loop = function() {
                 room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
                     {memory: {role: 'transfer'}});
             }
-            if(centers.length < maxCenters && Links.get(room_spawn.room.name).length >= 1 && testIfCanSpawnC == 0 && testIfCanSpawn == 0){
+            if(centers.length < maxCenters && global.getCachedStructures(roomName, STRUCTURE_LINK).length >= 1 && testIfCanSpawnC == 0 && testIfCanSpawn == 0){
                 var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 room_spawn.spawnCreep(CenterBP, newCenterName,
                     {memory: {role: 'center'}});
             }
-            if(harvester_upgr.length < maxHarvestersUpgr && harvesters.length == maxHarvesters && Sources.get(room_spawn.room.name).length >= 2 && testIfCanSpawn == 0 && upgraders.length == maxUpgraders) {
+            if(harvester_upgr.length < maxHarvestersUpgr && harvesters.length == maxHarvesters && global.getSources(room_spawn.room.name).length >= 2 && testIfCanSpawn == 0 && upgraders.length == maxUpgraders) {
                 var newHarvesterUpgrName = 'HU_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 room_spawn.spawnCreep(HarvesterUpgr_BP, newHarvesterUpgrName,
                     {memory: {role: 'harvester_upgr'}});
@@ -652,8 +631,8 @@ module.exports.loop = function() {
 
 
     //terminals
-    if(Game.time % 10 == 1){
-    _.forEach(Terminals.get(room_spawn.room.name), function(terminal){
+    if(Game.time % 10000000 == 1){
+    _.forEach(Game.rooms[roomName].terminal, function(terminal){
                 if(Game.resources[PIXEL] >= 0) {
                     var orders = Game.market.getAllOrders(order => order.resourceType == PIXEL &&
                                                           order.type == ORDER_BUY);
@@ -667,7 +646,7 @@ module.exports.loop = function() {
                             }
                     }
                 }
-                if(Power_Spawns.get(terminal.room.name).length > 0){
+                if(global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN).length > 0){
                         if(terminal.store[RESOURCE_POWER] <= 1000) {
                             var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_POWER &&
                                                                   order.type == ORDER_SELL &&
@@ -717,7 +696,7 @@ module.exports.loop = function() {
             roleHarvester.run(creep);
         }
         if(creep.memory.role == 'upgrader') {
-            roleUpgrader.run(creep, Sources, Links, Containers, Terminals);
+            roleUpgrader.run(creep);
         }
         if(creep.memory.role == 'builder') {
             roleBuilder.run(creep);
@@ -738,7 +717,7 @@ module.exports.loop = function() {
             roleBuilderM.run(creep);
         }
         if(creep.memory.role == 'transfer') {
-            roleTransfer.run(creep, Power_Spawns, Nukers, Terminals);
+            // roleTransfer.run(creep, Power_Spawns, Nukers, Terminals);
         }
         if(creep.memory.role == 'zavodskoy') {
             roleZavodskoy.run(creep);

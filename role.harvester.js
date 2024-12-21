@@ -41,19 +41,18 @@ var roleHarvester = {
                         }
                     }
                 }
-            } else {
-                const targetStructure = Game.getObjectById(creep.memory.target);
-            
-                if (targetStructure) {
-                    if (creep.transfer(targetStructure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(targetStructure, { visualizePathStyle: { stroke: '#ffffff' } });
-                    } else {
-                        delete creep.memory.target;
-                    }
+            }
+            const targetStructure = Game.getObjectById(creep.memory.target);
+        
+            if (targetStructure) {
+                if (creep.transfer(targetStructure, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(targetStructure, { visualizePathStyle: { stroke: '#ffffff' } });
                 } else {
                     delete creep.memory.target;
                 }
-            }            
+            } else {
+                delete creep.memory.target;
+            }    
         }else {
             if (creep.harvest(sources[0]) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(sources[0], { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10});

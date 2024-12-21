@@ -42,20 +42,19 @@ var roleCenter = {
                         }
                     }
                 }
-            } else {
-                const targetStructure = Game.getObjectById(creep.memory.target);
-                
-                if (targetStructure) {
-                    const status = creep.transfer(targetStructure, RESOURCE_ENERGY)
-                    if(status === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(targetStructure, { visualizePathStyle: { stroke: '#ffffff' } });
-                    } else {
-                        delete creep.memory.target;
-                    }
+            }
+            const targetStructure = Game.getObjectById(creep.memory.target);
+            
+            if (targetStructure) {
+                const status = creep.transfer(targetStructure, RESOURCE_ENERGY);
+                if(status === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(targetStructure, { visualizePathStyle: { stroke: '#ffffff' } });
                 } else {
                     delete creep.memory.target;
                 }
-            }            
+            } else {
+                delete creep.memory.target;
+            }          
             /*
 Why does everything end up like this
 I swear I knew it would end
@@ -164,19 +163,17 @@ Cus I don’t want you hearing about me
                     }
                 }
             }
-            else{
-                const targetStructure = Game.getObjectById(creep.memory.target);
-            
-                if (targetStructure) {
-                    const status = creep.withdraw(targetStructure, RESOURCE_ENERGY);
-                    if(status === ERR_NOT_IN_RANGE) {
-                        creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
-                    } else if(status === ERR_NOT_ENOUGH_RESOURCES){
-                        delete creep.memory.target;
-                    }
-                } else {
+            const targetStructure = Game.getObjectById(creep.memory.target);
+        
+            if (targetStructure) {
+                const status = creep.withdraw(targetStructure, RESOURCE_ENERGY);
+                if(status === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
+                } else if(status === ERR_NOT_ENOUGH_RESOURCES){
                     delete creep.memory.target;
                 }
+            } else {
+                delete creep.memory.target;
             }
         }
     }
