@@ -1,6 +1,7 @@
 var roleCenter = {
     run: function(creep, Containers, dLinks, Extantions, Spawns, Towers, Nukers, Terminals, Storages) {
         const roomName = creep.room.name;
+        console.log(Memory.cache.roomPlan[roomName][STRUCTURE_EXTENSION]);
         //PRIORITY LIST:
         //EXT/SPAWN -> TOWERS -> NUKER -> STORAGE/TERMINAL
 
