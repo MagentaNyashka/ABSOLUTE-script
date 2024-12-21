@@ -589,7 +589,7 @@ module.exports.loop = function() {
                 room_spawn.spawnCreep(Builder_BP, newBuilderName,
                     {memory: {role: 'builder'}});
             }
-            if(transfers.length < maxTransferers && harvesters.length == maxHarvesters && Power_Spawns.get(room_spawn.room.name).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+            if(transfers.length < maxTransferers && harvesters.length == maxHarvesters && global.getConstructionSites(roomName, STRUCTURE_POWER_SPAWN).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
                 var newTransferName = 'T_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
                     {memory: {role: 'transfer'}});
