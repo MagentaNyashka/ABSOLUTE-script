@@ -318,7 +318,8 @@ module.exports.loop = function() {
             CACHE_SPAWN();
         }
     _.forEach(my_spawns, function(room_spawn){
-        roomPlanCacher(room_spawn.room.name);
+        const roomName = room_spawn.room.name; 
+        roomPlanCacher(roomName);
         CACHE();
         TowerCACHE(room_spawn);
 
@@ -560,11 +561,12 @@ module.exports.loop = function() {
         }
             
         if(room_spawn.spawnCreep() != 0){
-            var spawn_list = Spawns.get(room_spawn.room.name);
+            var spawn_list = global.getCachedStructures(roomName, STRUCTURE_SPAWN);
         }
         else{
             var spawn_list = room_spawn;
         }
+        console.log(spawn_list);
         CACHE_CREEPS(room_spawn);
 
         _.forEach(spawn_list, function(room_spawn){
