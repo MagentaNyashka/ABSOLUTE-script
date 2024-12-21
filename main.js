@@ -83,7 +83,7 @@ Centers = new Map();
 HarvesterUpgr = new Map();
 
 
-Object.defineProperty(Memory.cache.prototype, 'myCreeps', {
+Object.defineProperty(Memory.prototype, 'myCreeps', {
     get: function () {
         if (!this._myCreeps) {
             this._myCreeps = this.find(FIND_CREEPS).filter((c) => c.my);
