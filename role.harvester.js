@@ -3,7 +3,7 @@ var roleHarvester = {
         const roomName = creep.room.name;
 
         // const energyStructures = Links.get(roomName).concat(Containers.get(roomName));
-        const energyStructures = global.getCachedStructures(roomName, STRUCTURE_LINK);//.concat(global.getCachedStructures(roomName, STRUCTURE_CONTAINER));
+        const energyStructures = global.getCachedStructures(roomName, STRUCTURE_LINK).concat(global.getCachedStructures(roomName, STRUCTURE_CONTAINER));
 
         const sources = global.getSources(roomName);
 
@@ -53,19 +53,11 @@ var roleHarvester = {
                 }
             }            
         }else {
-                /*
-                const source = creep.pos.findClosestByPath(sources, {
-                    filter: s => s.energy > 0,
-                });
-                if (source && creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
-                }
-                */
-                if (creep.harvest(sources[0]) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(sources[0], { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10});
-                }
+            if (creep.harvest(sources[0]) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(sources[0], { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10});
             }
-        },
+        }
+    },
 };
 
 module.exports = roleHarvester;

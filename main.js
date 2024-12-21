@@ -54,7 +54,6 @@ if(!global.cache){
 }
 
 //"CACHE"
-var bullasg = 'a';
 var my_spawns = [];
 Spawns = new Map();
 Terminals = new Map();
@@ -266,7 +265,7 @@ global.getCachedStructures = function (roomName, structureType) {
     }
     if (!global.cache[roomName][structureType]) {
         const encodedData = Memory.cache.roomPlan[roomName][structureType];
-        if (!encodedData) {
+        if (!encodedData || encodedData === "0") {
             return [];
         }
 
@@ -316,11 +315,6 @@ CACHE();
 
 profiler.enable();
 module.exports.loop = function() {
-    // const map = new utf15.Codec({depth: 6, array: 1});
-    // const encoded = map.encode(arr);
-    // const decoded = map.decode(encoded);
-    // console.log(encoded);
-    // console.log(decoded);
     profiler.wrap(function() {
     Game.cpu.generatePixel();
     
