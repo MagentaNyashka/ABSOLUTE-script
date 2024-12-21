@@ -720,7 +720,7 @@ module.exports.loop = function() {
             roleMiner.run(creep);
         }
         if(creep.memory.role == 'center') {
-            roleCenter.run(creep, Containers, dLinks, Extantions, Spawns, Towers, Nukers, Terminals, Storages);
+            roleCenter.run(creep);
         }
         if(creep.memory.role == 'harvester_upgr') {
             roleHarvesterUpgr.run(creep);
