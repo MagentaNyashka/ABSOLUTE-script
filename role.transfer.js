@@ -55,12 +55,12 @@ var roleTransfer = {
         }
         else{
             if(!creep.memory.target){
-                if(nuker.length > 0){
+                if(nuker.length > 0 && nuker.store.getFreeCapacity(RESOURCE_GHODIUM) >= creep.store.getFreeCapacity()){
                     creep.memory.target = terminal.id;
                     creep.memory.resource = RESOURCE_GHODIUM;
                 }
                 else{
-                    if(power_spawn[0].store.getFreeCapacity(RESOURCE_POWER) >= 10){
+                    if(power_spawn[0].store.getFreeCapacity(RESOURCE_POWER) >= creep.store.getCapacity()){
                         creep.memory.target = terminal.id;
                         creep.memory.resource = RESOURCE_POWER;
                     }
@@ -73,7 +73,13 @@ var roleTransfer = {
             const targetStructure = Game.getObjectById(creep.memory.target);
             if (targetStructure) {
                 new RoomVisual(roomName).circle(targetStructure.pos, {fill: '#ff0000', opacity: 0.5, radius: 0.55});
-                const status = creep.withdraw(targetStructure, RESOURCE_ENERGY);
+                let status;
+                if(creep.memory.resource == RESOURCE_POWER){
+                    status = creep.withdraw(targetStructure, creep.memory.resource, 50);
+                }
+                else{
+                    status = creep.withdraw(targetStructure, creep.memory.resource);
+                }
                 if(status === ERR_NOT_IN_RANGE) {
                     creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
                 } else if(status === ERR_NOT_ENOUGH_RESOURCES){

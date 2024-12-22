@@ -53,7 +53,7 @@ var roleUpgrader = {
                         status = creep.harvest(targetStructure);
                     }
                     if(status === ERR_NOT_IN_RANGE || status === ERR_NOT_ENOUGH_ENERGY){
-                        creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#00ffff'}, reusePath: 10});
+                        creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#00ffff'}});
                     }
                     else{
                         delete creep.memory.target;

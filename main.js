@@ -443,6 +443,46 @@ global.getSourceLinks = function(roomName){
 
 CACHE_SPAWN();
 
+
+function adjustMaxUpgradersByEnergy(maxUpgraders, roomName) {
+    const storage = Game.rooms[roomName].storage;
+    const terminal = Game.rooms[roomName].terminal;
+    let totalEnergy = 0;
+    if (storage) {
+        totalEnergy += storage.store[RESOURCE_ENERGY] || 0;
+    }
+    if (terminal) {
+        totalEnergy += terminal.store[RESOURCE_ENERGY] || 0;
+    }
+    const additionalUpgraders = Math.floor(totalEnergy / 50000);
+    maxUpgraders = (maxUpgraders || 0) + additionalUpgraders;
+    if(maxUpgraders < 1){
+        maxUpgraders = 1;
+    }
+    return maxUpgraders;
+}
+
+function getRoomPriorityByControllerCompletion() {
+    const rooms = Object.values(Game.rooms).filter(room => room.controller && room.controller.my);
+    const roomCompletion = rooms.map(room => {
+        const controller = room.controller;
+        const progress = controller.progress || 0;
+        const progressTotal = controller.progressTotal || 1;
+        const completionPercentage = (progress / progressTotal) * 100;
+        return { roomName: room.name, completionPercentage };
+    });
+
+    roomCompletion.sort((a, b) => b.completionPercentage - a.completionPercentage);
+
+    return roomCompletion.map(room => room.roomName);
+}
+
+
+
+
+
+
+
 profiler.enable();
 module.exports.loop = function() {
     clearConsole();
@@ -511,13 +551,16 @@ module.exports.loop = function() {
         if(power_spawn.length > 0){
             power_spawn[0].processPower();
         }
+
+        
+
         const Extensions = global.getCachedStructures(roomName, STRUCTURE_EXTENSION);
         {
         var room_level = "L0";
         var Harvester_BP = [WORK,CARRY,MOVE];
         var maxHarvesters = 1;
         var Ugrader_BP = [WORK,CARRY,MOVE];
-        var maxUpgraders = 1;
+        var maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
         var Builder_BP = [WORK,CARRY,CARRY,MOVE];
         var maxBuilders = 1;
         var maxCenters = 0;
@@ -541,7 +584,7 @@ module.exports.loop = function() {
             var Harvester_BP = [WORK,WORK,CARRY,MOVE];
             var maxHarvesters = 3;
             var Ugrader_BP = [WORK,WORK,CARRY,MOVE];
-            var maxUpgraders = 3;
+            var maxUpgraders = adjustMaxUpgradersByEnergy(3, roomName);
             var Builder_BP = [WORK,CARRY,CARRY,MOVE];
             var maxBuilders = 3;
             var maxCenters = 0;
@@ -560,7 +603,7 @@ module.exports.loop = function() {
             var Harvester_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
             var maxHarvesters = 1;
             var Ugrader_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
-            var maxUpgraders = 1;
+            var maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
             var maxBuilders = 2;
             var Builder_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
             var maxCenters = 0;
@@ -579,7 +622,7 @@ module.exports.loop = function() {
             var Harvester_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
             var maxHarvesters = 2;
             var Ugrader_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
-            var maxUpgraders = 2;
+            var maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
             var Builder_BP = [WORK,WORK,CARRY,CARRY,MOVE,MOVE];
             var maxBuilders = 1;
             var maxCenters = 0;
@@ -598,7 +641,7 @@ module.exports.loop = function() {
             var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
             var maxHarvesters = 2;
             var Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
-            var maxUpgraders = 2;
+            var maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
             var Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
             var maxBuilders = 1;
             var maxCenters = 1;
@@ -621,7 +664,7 @@ module.exports.loop = function() {
             var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
             var maxHarvesters = 1;
             var Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxUpgraders = 1;
+            var maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
             var Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
             var maxBuilders = 1;
             var maxCenters = 1;
@@ -640,7 +683,7 @@ module.exports.loop = function() {
             var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
             var maxHarvesters = 1;
             var Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxUpgraders = 1;
+            var maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
             var Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
             var maxBuilders = 1;
             var maxCenters = 1;
@@ -659,7 +702,7 @@ module.exports.loop = function() {
             var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
             var maxHarvesters = 1;
             var Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
-            var maxUpgraders = 1;
+            var maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
             var Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
             var maxBuilders = 1;
             var maxCenters = 1;
@@ -774,64 +817,84 @@ module.exports.loop = function() {
 
 
     //terminals
-    if(Game.time % 10000000 == 1){
-    _.forEach(Game.rooms[roomName].terminal, function(terminal){
-                if(Game.resources[PIXEL] >= 0) {
-                    var orders = Game.market.getAllOrders(order => order.resourceType == PIXEL &&
-                                                          order.type == ORDER_BUY);
-                                                          orders.sort(function(a,b){return b.price - a.price;});
-                    if(orders.length != 0){
-                            if(orders[0].amount > Game.resources[PIXEL]){
-                                var result = Game.market.deal(orders[0].id, Game.resources[PIXEL]);
-                            }
-                            else{
-                                var result = Game.market.deal(orders[0].id, orders[0].amount);
-                            }
+    if(Game.time % 10 == 1){
+        const priorityRooms = getRoomPriorityByControllerCompletion();
+        if(Game.rooms[roomName].terminal != undefined){
+            const terminal = Game.rooms[roomName].terminal;
+            if(Game.resources[PIXEL] >= 0) {
+                var orders = Game.market.getAllOrders(order => order.resourceType == PIXEL &&
+                                                      order.type == ORDER_BUY);
+                                                      orders.sort(function(a,b){return b.price - a.price;});
+                if(orders.length != 0){
+                        if(orders[0].amount > Game.resources[PIXEL]){
+                            var result = Game.market.deal(orders[0].id, Game.resources[PIXEL]);
+                        }
+                        else{
+                            var result = Game.market.deal(orders[0].id, orders[0].amount);
+                        }
+                }
+            }
+            /*
+            if(global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN).length > 0){
+                    if(terminal.store[RESOURCE_POWER] <= 1000) {
+                        var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_POWER &&
+                                                              order.type == ORDER_SELL &&
+                                                              Game.market.calcTransactionCost(terminal.store[RESOURCE_POWER], terminal.room.name, order.roomName) < 200000
+                                                            );
+                                                            orders.sort(function(a,b){return a.price - b.price;});
+                        if(orders.length != 0){
+                                    var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
+                        }
                     }
                 }
-                if(global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN).length > 0){
-                        if(terminal.store[RESOURCE_POWER] <= 1000) {
-                            var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_POWER &&
-                                                                  order.type == ORDER_SELL &&
-                                                                  Game.market.calcTransactionCost(terminal.store[RESOURCE_POWER], terminal.room.name, order.roomName) < 200000
-                                                                );
-                                                                orders.sort(function(a,b){return a.price - b.price;});
-                            if(orders.length != 0){
-                                        var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
-                            }
+                else{
+                */
+            
+            if(terminal.store[RESOURCE_ENERGY] >= 10000 && Game.rooms[roomName].controller.level == 8){
+                let targetRoom = priorityRooms[0];
+                for(let i = 0; i < priorityRooms.length; i++){
+                    if(roomName != priorityRooms[i] && Game.rooms[priorityRooms[i]].terminal != undefined && Game.rooms[priorityRooms[i]].controller.level <= 7){
+                        targetRoom = priorityRooms[i];
+                        break;
+                    }
+                }
+                if(Game.rooms[targetRoom].terminal.store.getFreeCapacity(RESOURCE_ENERGY) > terminal.store[RESOURCE_ENERGY]){
+                    terminal.send(RESOURCE_ENERGY, (terminal.store[RESOURCE_ENERGY]*0.75), targetRoom);
+                }
+                else{
+                    terminal.send(RESOURCE_ENERGY, Game.rooms[targetRoom].terminal.store.getFreeCapacity(RESOURCE_ENERGY), targetRoom);
+                }
+            }else{
+                if(terminal.store[RESOURCE_ENERGY] >= 200000){ {
+                    var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_ENERGY &&
+                        order.type == ORDER_BUY &&
+                        Game.market.calcTransactionCost(terminal.store[RESOURCE_ENERGY], terminal.room.name, order.roomName) < 200000
+                        );
+                        orders.sort(function(a,b){return b.price - a.price;});
+                        if(orders.length != 0){
+                        var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
+                        }
+                }
+            }
+            
+            if(terminal.room.find(FIND_MY_STRUCTURES, {
+                filter: (structure) => {
+                    return(structure.structureType == STRUCTURE_NUKER) &&
+                    structure.isActive() && structure.store[RESOURCE_GHODIUM] < 5000;
+                }}).length > 0){
+                    if(terminal.store[RESOURCE_GHODIUM] <= 1000) {
+                        var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_GHODIUM &&
+                                                              order.type == ORDER_SELL &&
+                                                              Game.market.calcTransactionCost(terminal.store[RESOURCE_GHODIUM], terminal.room.name, order.roomName) < 200000
+                                                            );
+                        if(orders.length != 0){
+                                    var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
                         }
                     }
-                    else{
-                        if(terminal.store[RESOURCE_ENERGY] >= 10000) {
-                            const targetRoom = Power_Spawns.keys().next().value;
-                            if(Terminals.get(targetRoom)[0].store.getFreeCapacity(RESOURCE_ENERGY) > terminal.store[RESOURCE_ENERGY]){
-                                terminal.send(RESOURCE_ENERGY, (terminal.store[RESOURCE_ENERGY]*0.75), targetRoom);
-                            }
-                            else{
-                                terminal.send(RESOURCE_ENERGY, Terminals.get(targetRoom)[0].store.getFreeCapacity(RESOURCE_ENERGY), targetRoom);
-                            }
-                        }
-                    }
-    
-                    if(terminal.room.find(FIND_MY_STRUCTURES, {
-                        filter: (structure) => {
-                            return(structure.structureType == STRUCTURE_NUKER) &&
-                            structure.isActive() && structure.store[RESOURCE_GHODIUM] < 5000;
-                        }}).length > 0){
-                            if(terminal.store[RESOURCE_GHODIUM] <= 1000) {
-                                var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_GHODIUM &&
-                                                                      order.type == ORDER_SELL &&
-                                                                      Game.market.calcTransactionCost(terminal.store[RESOURCE_GHODIUM], terminal.room.name, order.roomName) < 200000
-                                                                    );
-                                if(orders.length != 0){
-                                            var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
-                                }
-                            }
-                        }
-    
-            });  }  
+                }
+    }}  }  
 
-            });
+    });
 
     for(var name in Game.creeps) {
         var creep = Game.creeps[name];
