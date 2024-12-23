@@ -160,6 +160,12 @@ Cus I don’t want you hearing about me
                         if(storages.store[RESOURCE_ENERGY] > 0){
                             creep.memory.target = storages.id;
                         }
+                        else{
+                            const terminal = Game.rooms[roomName].terminal;
+                            if(terminal.store[RESOURCE_ENERGY] > 0){
+                                creep.memory.target = terminal.id;
+                            }
+                        }
                     }
                 }
             }

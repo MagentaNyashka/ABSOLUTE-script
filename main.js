@@ -14,6 +14,8 @@ var roleZavodskoy = require('role.zavodskoy');
 const { lastIndexOf } = require('lodash');
 const profiler = require('screeps-profiler');
 const utf15 = require('utf15');
+const roleScout = require('role.scout');
+const roleRemoteMiner = require('role.remoteMiner');
 
 const map_codec = new utf15.Codec({ depth: 6, array: 1 });
 
@@ -40,6 +42,14 @@ const STRUCTURE_TYPES = [
     STRUCTURE_FACTORY,
     STRUCTURE_INVADER_CORE,
 ];
+
+function totalRemoteSources(){
+    let totalSources = 0;
+    _.forEach(Memory.remoteRooms, function(remoteRoom){
+        totalSources += remoteRoom.sources;
+    });
+    return totalSources;
+}
 
 const SLINK = "sourceLinks";
 const DLINK = "destinationLinks";
@@ -577,6 +587,10 @@ module.exports.loop = function() {
         var Claimer_BP = [CLAIM, MOVE];
         var maxBuildersM = 0;
         var Builder_M_BP = [WORK,CARRY,MOVE];
+        var maxScouts = 0;
+        var Scout_BP = [MOVE];
+        var maxRemoteMiners = 0;
+        var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
 
         if(Extensions.length < 5){
@@ -597,6 +611,10 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+            var maxScouts = 0;
+            var Scout_BP = [MOVE];
+            var maxRemoteMiners = 0;
+            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 10 && Extensions.length >= 5){
             var room_level = "L2";
@@ -616,6 +634,10 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+            var maxScouts = 0;
+            var Scout_BP = [MOVE];
+            var maxRemoteMiners = 0;
+            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 20 && Extensions.length >= 10){
             var room_level = "L3";
@@ -635,6 +657,10 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+            var maxScouts = 0;
+            var Scout_BP = [MOVE];
+            var maxRemoteMiners = 0;
+            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 30 && Extensions.length >= 20){
             var room_level = "L4";
@@ -658,6 +684,10 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+            var maxScouts = 0;
+            var Scout_BP = [MOVE];
+            var maxRemoteMiners = 0;
+            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 40 && Extensions.length >= 30){
             var room_level = "L5";
@@ -677,6 +707,10 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+            var maxScouts = 0;
+            var Scout_BP = [MOVE];
+            var maxRemoteMiners = 0;
+            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 50 && Extensions.length >= 40){
             var room_level = "L6";
@@ -696,6 +730,10 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+            var maxScouts = 0;
+            var Scout_BP = [MOVE];
+            var maxRemoteMiners = 0;
+            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 60 && Extensions.length >= 50 ){
             var room_level = "L7";
@@ -715,10 +753,14 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+            var maxScouts = 0;
+            var Scout_BP = [MOVE];
+            var maxRemoteMiners = 0;
+            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length >= 60 ){
             var room_level = "L8";
-            var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
+            var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
             var maxHarvesters = 1;
             var Ugrader_BP = [WORK,CARRY,MOVE];
             var maxUpgraders = 1;
@@ -734,6 +776,10 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+            var maxScouts = 1;
+            var Scout_BP = [MOVE];
+            var maxRemoteMiners = totalRemoteSources();
+            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         try{
             render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHarvestersUpgr, maxTransferers, maxCenters);
@@ -812,6 +858,18 @@ module.exports.loop = function() {
                 var newBuilderMName = 'BM_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 room_spawn.spawnCreep(Builder_M_BP, newBuilderMName,
                     {memory: {role: 'builder_m'}});
+            }
+            var scouts = _.filter(Game.creeps, (creep) => creep.memory.role === 'scout');
+            if(scouts.length < maxScouts && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+                var newScoutName = 'S_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                room_spawn.spawnCreep(Scout_BP, newScoutName,
+                    {memory: {role: 'scout'}});
+            }
+            var remoteMiners = _.filter(Game.creeps, (creep) => creep.memory.role === 'remoteMiner');
+            if(remoteMiners.length < maxRemoteMiners && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+                var newRemoteMinerName = 'RM_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                room_spawn.spawnCreep(RemoteMiner_BP, newRemoteMinerName,
+                    {memory: {role: 'remoteMiner'}});
             }
        });
 
@@ -927,6 +985,12 @@ module.exports.loop = function() {
         }
         if(creep.memory.role == 'zavodskoy') {
             roleZavodskoy.run(creep);
+        }
+        if(creep.memory.role == 'scout'){
+            roleScout.run(creep);
+        }
+        if(creep.memory.role == 'remoteMiner'){
+            roleRemoteMiner.run(creep);
         }
     }
 render();
