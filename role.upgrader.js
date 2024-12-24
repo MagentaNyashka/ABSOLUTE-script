@@ -23,12 +23,12 @@ var roleUpgrader = {
         }
         else if(!creep.memory.transferring && creep.store.getFreeCapacity() >= 0) {
             if(!creep.memory.target){
-                if(storage && storage.store[RESOURCE_ENERGY] > 100000){
+                if(storage && storage.store[RESOURCE_ENERGY] > 1000 && creep.room.controller.level != 8){
                     creep.memory.target = storage.id;
                 }
                 else{
                     const terminal = Game.rooms[roomName].terminal;
-                    if(terminal && terminal.store[RESOURCE_ENERGY] > 50000){
+                    if(terminal && terminal.store[RESOURCE_ENERGY] > 50000 && creep.room.controller.level != 8){
                         creep.memory.target = terminal.id;
                     }
                     else{

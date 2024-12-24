@@ -33,8 +33,9 @@ var roleHarvester = {
                     if (towers.length > 0) {
                         creep.memory.target = creep.pos.findClosestByPath(towers).id;
                     } else {
-                        const otherTargets = creep.room.terminal
-                            .concat(global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN))
+                        const otherTargets = []
+                            .concat(creep.room.terminal ? [creep.room.terminal] : [])
+                            .concat(global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN) || [])
                             .filter(structure => structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
                         if (otherTargets.length > 0) {
                             creep.memory.target = creep.pos.findClosestByPath(otherTargets).id;

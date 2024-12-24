@@ -16,6 +16,8 @@ const profiler = require('screeps-profiler');
 const utf15 = require('utf15');
 const roleScout = require('role.scout');
 const roleRemoteMiner = require('role.remoteMiner');
+const roleClaimRoom = require('./role.claimRoom');
+const roleRemoteClaimer = require('./role.claimRoom');
 
 const map_codec = new utf15.Codec({ depth: 6, array: 1 });
 
@@ -230,11 +232,15 @@ function render(){
 
 function roomPlanCacher(roomName){
     if (Game.time % 500 === 0) {
-        if (!this.roomPlan) {
-            this.roomPlan = {};
+        Game.notify(`roomPlanCacher inprogress for room ${Game.shard.name}:[${roomName}]`);
+        if(!Memory.cache){
+            Memory.cache = {};
         }
-        if (!this.roomPlan[roomName]) {
-            this.roomPlan[roomName] = {};
+        if (!Memory.cache.roomPlan) {
+            Memory.cache.roomPlan = {};
+        }
+        if (!Memory.cache.roomPlan[roomName]) {
+            Memory.cache.roomPlan[roomName] = {};
         }
 
         const structures = Game.rooms[roomName].find(FIND_STRUCTURES, {
@@ -379,6 +385,15 @@ global.getDestLinks = function(roomName){
         global.cache[roomName] = {};
     }
     if(!global.cache[roomName].dLinks){
+        if(!Memory.cache){
+            return;
+        }
+        if(!Memory.cache.roomPlan){
+            return;
+        }
+        if(!Memory.cache.roomPlan[roomName]){
+            return;
+        }
         const encodedData = Memory.cache.roomPlan[roomName][DLINK];
         if (!encodedData || encodedData === "0") {
             return [];
@@ -419,6 +434,15 @@ global.getSourceLinks = function(roomName){
         global.cache[roomName] = {};
     }
     if(!global.cache[roomName].sLinks){
+        if(!Memory.cache){
+            return;
+        }
+        if(!Memory.cache.roomPlan){
+            return;
+        }
+        if(!Memory.cache.roomPlan[roomName]){
+            return;
+        }
         const encodedData = Memory.cache.roomPlan[roomName][SLINK];
         if (!encodedData || encodedData === "0") {
             return [];
@@ -451,6 +475,67 @@ global.getSourceLinks = function(roomName){
     return global.cache[roomName][SLINK];
 };
 
+function findClosestHighwayRoom(roomName) {
+    const { x, y } = getRoomCoordinates(roomName);
+
+    // Helper function to compute Manhattan distance
+    function manhattanDistance(x1, y1, x2, y2) {
+        return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+    }
+
+    // Generate a list of possible highway rooms
+    const highwayRooms = [];
+
+    // Add all potential highway rooms at x:0 and x:30
+    highwayRooms.push({ x: 0, y });
+    highwayRooms.push({ x: 30, y });
+
+    // Add all potential highway rooms at y:0 and y:30
+    highwayRooms.push({ x, y: 0 });
+    highwayRooms.push({ x, y: 30 });
+
+    // Find the closest highway room
+    let closestRoom = null;
+    let minDistance = Infinity;
+
+    for (const highway of highwayRooms) {
+        const distance = manhattanDistance(x, y, highway.x, highway.y);
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestRoom = highway;
+        }
+    }
+
+    // Convert closestRoom coordinates back to room name
+    if (closestRoom) {
+        return getRoomNameFromCoordinates(closestRoom.x, closestRoom.y);
+    }
+
+    return null; // No highway room found (unlikely in valid Screeps map)
+}
+
+// Helper to parse room coordinates
+function getRoomCoordinates(roomName) {
+    const match = roomName.match(/([WE])(\d+)([NS])(\d+)/);
+    if (!match) {
+        throw new Error(`Invalid room name: ${roomName}`);
+    }
+
+    const x = match[1] === 'W' ? -parseInt(match[2], 10) : parseInt(match[2], 10);
+    const y = match[3] === 'N' ? parseInt(match[4], 10) : -parseInt(match[4], 10);
+
+    return { x, y };
+}
+
+// Helper to convert coordinates back to room name
+function getRoomNameFromCoordinates(x, y) {
+    const xDir = x < 0 ? 'W' : 'E';
+    const yDir = y < 0 ? 'S' : 'N';
+    return `${xDir}${Math.abs(x)}${yDir}${Math.abs(y)}`;
+}
+
+
+
 CACHE_SPAWN();
 
 
@@ -464,7 +549,7 @@ function adjustMaxUpgradersByEnergy(maxUpgraders, roomName) {
     if (terminal) {
         totalEnergy += terminal.store[RESOURCE_ENERGY] || 0;
     }
-    const additionalUpgraders = Math.floor(totalEnergy / 50000);
+    const additionalUpgraders = Math.floor(totalEnergy / 25000) + 1;
     maxUpgraders = (maxUpgraders || 0) + additionalUpgraders;
     if(maxUpgraders < 1){
         maxUpgraders = 1;
@@ -488,6 +573,16 @@ function getRoomPriorityByControllerCompletion() {
 }
 
 
+function readCreepRolesFromIntershardMemory(shard) {
+    const intershardData = InterShardMemory.getRemote(shard);
+    if (!intershardData) {
+        console.log("No data in Intershard Memory.");
+        return {};
+    }
+
+    const parsedData = JSON.parse(intershardData);
+    return parsedData.creepRoles || {};
+}
 
 
 
@@ -495,7 +590,8 @@ function getRoomPriorityByControllerCompletion() {
 
 profiler.enable();
 module.exports.loop = function() {
-    clearConsole();
+    // console.log(findClosestHighwayRoom('E1N24'));
+    //clearConsole();
     profiler.wrap(function() {
     Game.cpu.generatePixel();
     
@@ -544,7 +640,10 @@ module.exports.loop = function() {
         //roomPlanCacher(room_spawn.room.name);
 
         const source_links = global.getSourceLinks(roomName);
-        const destination_links = global.getDestLinks(roomName).sort(function(a,b){return b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY];});
+        const destination_links = global.getDestLinks(roomName);
+        if(destination_links){
+            destination_links.sort(function(a,b){return b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY];});
+        }
 
         _.forEach(source_links, function(link){
             if(destination_links.length > 0){
@@ -579,18 +678,10 @@ module.exports.loop = function() {
         var HarvesterUpgr_BP = [WORK,WORK,CARRY,MOVE];
         var maxTransferers = 0;
         var Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
-        var maxZavodskoy = 0;
-        var Zavodskoy_BP = [CARRY,CARRY,MOVE,MOVE];
-        var maxMiners = 0;
-        var Miner_BP = [WORK,WORK,CARRY,MOVE];
         var maxClaimers = 0;
         var Claimer_BP = [CLAIM, MOVE];
         var maxBuildersM = 0;
         var Builder_M_BP = [WORK,CARRY,MOVE];
-        var maxScouts = 0;
-        var Scout_BP = [MOVE];
-        var maxRemoteMiners = 0;
-        var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
 
         if(Extensions.length < 5){
@@ -611,10 +702,6 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxScouts = 0;
-            var Scout_BP = [MOVE];
-            var maxRemoteMiners = 0;
-            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 10 && Extensions.length >= 5){
             var room_level = "L2";
@@ -634,10 +721,6 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxScouts = 0;
-            var Scout_BP = [MOVE];
-            var maxRemoteMiners = 0;
-            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 20 && Extensions.length >= 10){
             var room_level = "L3";
@@ -657,10 +740,6 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxScouts = 0;
-            var Scout_BP = [MOVE];
-            var maxRemoteMiners = 0;
-            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 30 && Extensions.length >= 20){
             var room_level = "L4";
@@ -684,10 +763,6 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxScouts = 0;
-            var Scout_BP = [MOVE];
-            var maxRemoteMiners = 0;
-            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 40 && Extensions.length >= 30){
             var room_level = "L5";
@@ -707,10 +782,6 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxScouts = 0;
-            var Scout_BP = [MOVE];
-            var maxRemoteMiners = 0;
-            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 50 && Extensions.length >= 40){
             var room_level = "L6";
@@ -730,10 +801,6 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxScouts = 0;
-            var Scout_BP = [MOVE];
-            var maxRemoteMiners = 0;
-            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length < 60 && Extensions.length >= 50 ){
             var room_level = "L7";
@@ -753,10 +820,6 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxScouts = 0;
-            var Scout_BP = [MOVE];
-            var maxRemoteMiners = 0;
-            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
         }
         if(Extensions.length >= 60 ){
             var room_level = "L8";
@@ -765,7 +828,7 @@ module.exports.loop = function() {
             var Ugrader_BP = [WORK,CARRY,MOVE];
             var maxUpgraders = 1;
             var Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
-            var maxBuilders = 5;
+            var maxBuilders = 1;
             var maxCenters = 1;
             var CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
             var maxHarvestersUpgr = 1;
@@ -776,25 +839,25 @@ module.exports.loop = function() {
             var Claimer_BP = [CLAIM, MOVE];
             var maxBuildersM = 0;
             var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxScouts = 1;
-            var Scout_BP = [MOVE];
-            var maxRemoteMiners = totalRemoteSources();
-            var RemoteMiner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+    
         }
         try{
             render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHarvestersUpgr, maxTransferers, maxCenters);
         }catch(e){
-            console.log("визуалки опять наебнулись");
-            console.log(e);
+            // console.log("визуалки опять наебнулись");
+            // console.log(e);
         }
+        var spawn_list = [];
         if(room_spawn.spawnCreep() != 0){
-            var spawn_list = global.getCachedStructures(roomName, STRUCTURE_SPAWN);
+            spawn_list = global.getCachedStructures(roomName, STRUCTURE_SPAWN);
         }
-        else{
-            var spawn_list = room_spawn;
+        else {
+            spawn_list = room_spawn;
+        }
+        if(spawn_list.length == 0){
+            spawn_list[0] = room_spawn;
         }
         CACHE_CREEPS(room_spawn);
-
         _.forEach(spawn_list, function(room_spawn){
             var testIfCanSpawn = room_spawn.spawnCreep(Harvester_BP, 'dry',{ dryRun: true });
             var testIfCanSpawnC = room_spawn.spawnCreep(CenterBP, 'dry',{ dryRun: true });
@@ -859,18 +922,13 @@ module.exports.loop = function() {
                 room_spawn.spawnCreep(Builder_M_BP, newBuilderMName,
                     {memory: {role: 'builder_m'}});
             }
-            var scouts = _.filter(Game.creeps, (creep) => creep.memory.role === 'scout');
-            if(scouts.length < maxScouts && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
-                var newScoutName = 'S_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Scout_BP, newScoutName,
-                    {memory: {role: 'scout'}});
+            var remoteClaimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'remote_claimer');
+            if(remoteClaimers.length < 5 && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0 && room_spawn.room.controller.level == 8){
+                var newName = 'RC_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                room_spawn.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY], newName,
+                    {memory: {role: 'remote_claimer'}});
             }
-            var remoteMiners = _.filter(Game.creeps, (creep) => creep.memory.role === 'remoteMiner');
-            if(remoteMiners.length < maxRemoteMiners && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
-                var newRemoteMinerName = 'RM_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(RemoteMiner_BP, newRemoteMinerName,
-                    {memory: {role: 'remoteMiner'}});
-            }
+
        });
 
 
@@ -879,19 +937,19 @@ module.exports.loop = function() {
         const priorityRooms = getRoomPriorityByControllerCompletion();
         if(Game.rooms[roomName].terminal != undefined){
             const terminal = Game.rooms[roomName].terminal;
-            if(Game.resources[PIXEL] >= 0) {
-                var orders = Game.market.getAllOrders(order => order.resourceType == PIXEL &&
-                                                      order.type == ORDER_BUY);
-                                                      orders.sort(function(a,b){return b.price - a.price;});
-                if(orders.length != 0){
-                        if(orders[0].amount > Game.resources[PIXEL]){
-                            var result = Game.market.deal(orders[0].id, Game.resources[PIXEL]);
-                        }
-                        else{
-                            var result = Game.market.deal(orders[0].id, orders[0].amount);
-                        }
-                }
-            }
+            // if(Game.resources[PIXEL] >= 0) {
+                // var orders = Game.market.getAllOrders(order => order.resourceType == PIXEL &&
+                                                    //   order.type == ORDER_BUY);
+                                                    //   orders.sort(function(a,b){return b.price - a.price;});
+                // if(orders.length != 0){
+                        // if(orders[0].amount > Game.resources[PIXEL]){
+                            // var result = Game.market.deal(orders[0].id, Game.resources[PIXEL]);
+                        // }
+                        // else{
+                            // var result = Game.market.deal(orders[0].id, orders[0].amount);
+                        // }
+                // }
+            // }
             /*
             if(global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN).length > 0){
                     if(terminal.store[RESOURCE_POWER] <= 1000) {
@@ -953,7 +1011,27 @@ module.exports.loop = function() {
     }}  }  
 
     });
-
+    // console.log(InterShardMemory.getLocal());
+    if(Game.shard.name === 'shard3'){
+        // InterShardMemory.setLocal("{}");
+    }
+    if(Game.shard.name === 'shard2'){
+        for(var name in Game.creeps){
+            // console.log(name);
+            const creep = Game.creeps[name];
+            if(!creep.memory.role){const data = JSON.parse(InterShardMemory.getRemote('shard3') || "{}");try{creep.memory.role = data.creepRoles[name].role;}catch{}}
+            // console.log(creep);
+            // console.log(creep.name);
+            // console.log(creep.memory.role);
+            
+            // console.log(JSON.stringify(data));
+            // console.log(data.creepRoles[name]);
+            // console.log(data.creepRoles[name].role);
+        }
+        // console.log(readCreepRolesFromIntershardMemory('shard3'));
+        // var data = JSON.parse(InterShardMemory.getRemote('shard3') || "{}");
+        // console.log(data.creepRoles);
+    }
     for(var name in Game.creeps) {
         var creep = Game.creeps[name];
         if(creep.memory.role == 'harvester') {
@@ -986,11 +1064,8 @@ module.exports.loop = function() {
         if(creep.memory.role == 'zavodskoy') {
             roleZavodskoy.run(creep);
         }
-        if(creep.memory.role == 'scout'){
-            roleScout.run(creep);
-        }
-        if(creep.memory.role == 'remoteMiner'){
-            roleRemoteMiner.run(creep);
+        if(creep.memory.role == 'remote_claimer') {
+            roleRemoteClaimer.run(creep);
         }
     }
 render();

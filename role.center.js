@@ -157,12 +157,12 @@ Cus I don’t want you hearing about me
                     }
                     else{
                         const storages = Game.rooms[roomName].storage;
-                        if(storages.store[RESOURCE_ENERGY] > 0){
+                        if(storages && storages.store[RESOURCE_ENERGY] > 0){
                             creep.memory.target = storages.id;
                         }
                         else{
                             const terminal = Game.rooms[roomName].terminal;
-                            if(terminal.store[RESOURCE_ENERGY] > 0){
+                            if(terminal && terminal.store[RESOURCE_ENERGY] > 0){
                                 creep.memory.target = terminal.id;
                             }
                         }
