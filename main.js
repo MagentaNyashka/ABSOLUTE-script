@@ -549,7 +549,7 @@ function adjustMaxUpgradersByEnergy(maxUpgraders, roomName) {
     if (terminal) {
         totalEnergy += terminal.store[RESOURCE_ENERGY] || 0;
     }
-    const additionalUpgraders = Math.floor(totalEnergy / 25000) + 1;
+    const additionalUpgraders = Math.floor(totalEnergy / 25000);
     maxUpgraders = (maxUpgraders || 0) + additionalUpgraders;
     if(maxUpgraders < 1){
         maxUpgraders = 1;
@@ -585,7 +585,29 @@ function readCreepRolesFromIntershardMemory(shard) {
 }
 
 
+function findSafeRoute(originRoom, targetRoom) {
+    const route = Game.map.findRoute(originRoom, targetRoom, {
+        routeCallback(roomName, fromRoomName) {
+            const room = Game.rooms[roomName];
+            if (room) {
+                const controller = room.controller;
+                if (controller && controller.owner && !controller.my) {
+                    // Avoid rooms with hostile controllers
+                    return Infinity;
+                }
+            }
+            // Default cost for rooms without hostile controllers
+            return 1;
+        }
+    });
 
+    if (route === ERR_NO_PATH) {
+        console.log(`No safe route found from ${originRoom} to ${targetRoom}`);
+        return null;
+    }
+
+    return route;
+}
 
 
 profiler.enable();
@@ -672,7 +694,7 @@ module.exports.loop = function() {
         var maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
         var Builder_BP = [WORK,CARRY,CARRY,MOVE];
         var maxBuilders = 1;
-        var maxCenters = 0;
+        var maxCenters = 1;
         var CenterBP = [WORK,WORK,CARRY,MOVE];
         var maxHarvestersUpgr = 1;
         var HarvesterUpgr_BP = [WORK,WORK,CARRY,MOVE];
@@ -692,11 +714,11 @@ module.exports.loop = function() {
             var maxUpgraders = adjustMaxUpgradersByEnergy(3, roomName);
             var Builder_BP = [WORK,CARRY,CARRY,MOVE];
             var maxBuilders = 3;
-            var maxCenters = 0;
+            var maxCenters = 1;
             var CenterBP = [CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
             var maxHarvestersUpgr = 3;
             var HarvesterUpgr_BP = [WORK,WORK,CARRY,MOVE];
-            var maxTransferers = 0;
+            var maxTransferers = 3;
             var Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
             var maxClaimers = 0;
             var Claimer_BP = [CLAIM, MOVE];
@@ -711,7 +733,7 @@ module.exports.loop = function() {
             var maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
             var maxBuilders = 2;
             var Builder_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
-            var maxCenters = 0;
+            var maxCenters = 1;
             var CenterBP = [CARRY, MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
             var maxHarvestersUpgr = 1;
             var HarvesterUpgr_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
@@ -730,7 +752,7 @@ module.exports.loop = function() {
             var maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
             var Builder_BP = [WORK,WORK,CARRY,CARRY,MOVE,MOVE];
             var maxBuilders = 1;
-            var maxCenters = 0;
+            var maxCenters = 1;
             var CenterBP = [CARRY, MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
             var maxHarvestersUpgr = 1;
             var HarvesterUpgr_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
@@ -874,7 +896,7 @@ module.exports.loop = function() {
                 room_spawn.spawnCreep(Harvester_BP, newHarvesterName,
                     {memory: {role: 'harvester'}});
             }
-            if(upgraders.length < maxUpgraders && harvesters.length >= maxHarvesters && testIfCanSpawn == 0){
+            if(upgraders.length < maxUpgraders && ((harvesters.length >= maxHarvesters && centers.length >= maxCenters) || room_spawn.room.controller.ticksToDowngrade < 15000) && testIfCanSpawn == 0){
                 var newUpgraderName = 'U_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 room_spawn.spawnCreep(Ugrader_BP, newUpgraderName,
                     {memory: {role: 'upgrader'}});
@@ -923,7 +945,7 @@ module.exports.loop = function() {
                     {memory: {role: 'builder_m'}});
             }
             var remoteClaimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'remote_claimer');
-            if(remoteClaimers.length < 5 && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0 && room_spawn.room.controller.level == 8){
+            if(remoteClaimers.length < 0 && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0 && room_spawn.room.controller.level == 8){
                 var newName = 'RC_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 room_spawn.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY], newName,
                     {memory: {role: 'remote_claimer'}});

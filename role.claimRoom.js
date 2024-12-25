@@ -141,9 +141,9 @@ const roleRemoteClaimer = {
             if(roomName === creep.memory.closestHighway){
                 creep.memory.isInHighway = true;
                 creep.memory.isInTargetRoom = false;
-                creep.memory.target = 'E1N29';
+                creep.memory.target = 'E1N28';
             }
-            if((roomName === creep.memory.target && creep.memory.isInHighway) || creep.memory.isInTargetRoom){
+            if((roomName === creep.memory.target && creep.memory.isInHighway) || (creep.memory.isInTargetRoom && creep.room.controller)){
                 const controller = creep.room.controller;
                 creep.memory.target = controller.id;
                 creep.memory.isInTargetRoom = true;
@@ -178,7 +178,7 @@ const roleRemoteClaimer = {
                     
                 }
                 else {
-                    var sources = creep.room.find(FIND_SOURCES);
+                    var sources = creep.room.find(FIND_SOURCES).filter(s => s.energy > 0);
                     if(creep.harvest(creep.pos.findClosestByPath(sources), RESOURCE_ENERGY) == ERR_NOT_IN_RANGE){
                         creep.moveTo(creep.pos.findClosestByPath(sources), {visualizePathStyle: {stroke: '#ffffff'}});
                     }

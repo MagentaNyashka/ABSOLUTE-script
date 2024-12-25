@@ -36,7 +36,11 @@ var roleUpgrader = {
                             creep.memory.target = creep.pos.findClosestByPath(energyStructures).id;
                         }
                         else{
-                            creep.memory.target = creep.pos.findClosestByPath(global.getSources(roomName)).id;
+                            const sources = global.getSources(roomName);
+                            const target = creep.pos.findClosestByPath(sources);
+                            if(target){
+                                creep.memory.target = target.id;
+                            }
                         }
                     }
                 }
