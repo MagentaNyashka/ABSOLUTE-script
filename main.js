@@ -20,6 +20,23 @@ const roleClaimRoom = require('./role.claimRoom');
 const roleRemoteClaimer = require('./role.claimRoom');
 
 const map_codec = new utf15.Codec({ depth: 6, array: 1 });
+function base62Encode(input) {
+    const base62Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let num = 0;
+
+    for (let i = 0; i < input.length; i++) {
+        num = (num * 31 + input.charCodeAt(i)) % Number.MAX_SAFE_INTEGER;
+    }
+
+    let encoded = "";
+    while (num > 0) {
+        encoded = base62Chars[num % 62] + encoded;
+        num = Math.floor(num / 62);
+    }
+
+    return encoded || "0";
+}
+
 
 const STRUCTURE_TYPES = [
     STRUCTURE_SPAWN,
@@ -56,6 +73,8 @@ function totalRemoteSources(){
 const SLINK = "sourceLinks";
 const DLINK = "destinationLinks";
 const SCONT = "sourceContainers";
+const DCONT = "destinationContainers";
+const CCONT = "controllerContainers";
 
 var price_old = -100;
 var price_old_x = -100;
@@ -84,6 +103,16 @@ Builders = new Map();
 Transfers = new Map();
 Centers = new Map();
 HarvesterUpgr = new Map();
+
+function hashCode(str) {
+    let hash = 0;
+    for (let i = 0, len = str.length; i < len; i++) {
+        let chr = str.charCodeAt(i);
+        hash = (hash << 5) - hash + chr;
+        hash |= 0; // Convert to 32bit integer
+    }
+    return hash;
+}
 
 
 function trackAverageCPU() {
@@ -378,6 +407,198 @@ function roomLinksCacher(roomName){
     }
 }
 
+function roomContainerCacher(roomName){
+    if(Game.time % 500 === 0){
+        if (!this.roomPlan) {
+            this.roomPlan = {};
+        }
+        if (!this.roomPlan[roomName]) {
+            this.roomPlan[roomName] = {};
+        }
+        const sources = global.getSources(roomName);
+        const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER);
+        let source_conts = [];
+        let dest_conts = [];
+        let controller_conts = [];
+
+        source_conts = containers.filter(container => {return sources.some(source => container.pos.inRangeTo(source.pos, 3));});
+        controller_conts = containers.filter(container => {return container.pos.inRangeTo(Game.rooms[roomName].controller, 3);});
+        dest_conts = containers.filter(container => {return !sources.some(source => container.pos.inRangeTo(source.pos, 3)) && !container.pos.inRangeTo(Game.rooms[roomName].controller, 3);});
+        let SCPositions = [];
+        let DCPositions = [];
+        let CCPositions = [];
+        _.forEach(source_conts, function (sCont) {
+            const valuesX = sCont.pos.x;
+            const valuesY = sCont.pos.y;
+            SCPositions.push(valuesX);
+            SCPositions.push(valuesY);
+        });
+        _.forEach(dest_conts, function (dCont) {
+            const valuesX = dCont.pos.x;
+            const valuesY = dCont.pos.y;
+            DCPositions.push(valuesX);
+            DCPositions.push(valuesY);
+        });
+        _.forEach(controller_conts, function (cCont) {
+            const valuesX = cCont.pos.x;
+            const valuesY = cCont.pos.y;
+            CCPositions.push(valuesX);
+            CCPositions.push(valuesY);
+        });
+
+        Memory.cache.roomPlan[roomName][SCONT] = map_codec.encode(SCPositions);
+        Memory.cache.roomPlan[roomName][DCONT] = map_codec.encode(DCPositions);
+        Memory.cache.roomPlan[roomName][CCONT] = map_codec.encode(CCPositions);
+    }
+}
+
+global.getControllerContainers = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName].cContainers){
+        if(!Memory.cache){
+            return;
+        }
+        if(!Memory.cache.roomPlan){
+            return;
+        }
+        if(!Memory.cache.roomPlan[roomName]){
+            return;
+        }
+        const encodedData = Memory.cache.roomPlan[roomName][CCONT];
+        if (!encodedData || encodedData === "0") {
+            return [];
+        }
+
+        const coordinates = map_codec.decode(encodedData);
+
+        let coordinatePairs = [];
+        for (let i = 0; i < coordinates.length; i += 2) {
+            if (coordinates[i + 1] !== undefined) {
+                coordinatePairs.push({ x: coordinates[i], y: coordinates[i + 1] });
+            }
+        }
+
+        let structures = [];
+        for (let i = 0; i < coordinatePairs.length; i++) {
+            const lookAtResult = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y);
+
+            const structure = lookAtResult.find(
+                (s) => s.type === LOOK_STRUCTURES && s.structure.structureType === STRUCTURE_CONTAINER
+            );
+            if (structure) {
+                structures.push(structure.structure);
+            }
+        }
+
+        global.cache[roomName][CCONT] = structures;
+    }
+
+    return global.cache[roomName][CCONT];
+};
+
+global.getSourceContainers = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName].cContainers){
+        if(!Memory.cache){
+            return;
+        }
+        if(!Memory.cache.roomPlan){
+            return;
+        }
+        if(!Memory.cache.roomPlan[roomName]){
+            return;
+        }
+        const encodedData = Memory.cache.roomPlan[roomName][SCONT];
+        if (!encodedData || encodedData === "0") {
+            return [];
+        }
+
+        const coordinates = map_codec.decode(encodedData);
+
+        let coordinatePairs = [];
+        for (let i = 0; i < coordinates.length; i += 2) {
+            if (coordinates[i + 1] !== undefined) {
+                coordinatePairs.push({ x: coordinates[i], y: coordinates[i + 1] });
+            }
+        }
+
+        let structures = [];
+        for (let i = 0; i < coordinatePairs.length; i++) {
+            const lookAtResult = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y);
+
+            const structure = lookAtResult.find(
+                (s) => s.type === LOOK_STRUCTURES && s.structure.structureType === STRUCTURE_CONTAINER
+            );
+            if (structure) {
+                structures.push(structure.structure);
+            }
+        }
+
+        global.cache[roomName][SCONT] = structures;
+    }
+
+    return global.cache[roomName][SCONT];
+};
+
+global.getDestContainers = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName].cContainers){
+        if(!Memory.cache){
+            return;
+        }
+        if(!Memory.cache.roomPlan){
+            return;
+        }
+        if(!Memory.cache.roomPlan[roomName]){
+            return;
+        }
+        const encodedData = Memory.cache.roomPlan[roomName][DCONT];
+        if (!encodedData || encodedData === "0") {
+            return [];
+        }
+
+        const coordinates = map_codec.decode(encodedData);
+
+        let coordinatePairs = [];
+        for (let i = 0; i < coordinates.length; i += 2) {
+            if (coordinates[i + 1] !== undefined) {
+                coordinatePairs.push({ x: coordinates[i], y: coordinates[i + 1] });
+            }
+        }
+
+        let structures = [];
+        for (let i = 0; i < coordinatePairs.length; i++) {
+            const lookAtResult = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y);
+
+            const structure = lookAtResult.find(
+                (s) => s.type === LOOK_STRUCTURES && s.structure.structureType === STRUCTURE_CONTAINER
+            );
+            if (structure) {
+                structures.push(structure.structure);
+            }
+        }
+
+        global.cache[roomName][DCONT] = structures;
+    }
+
+    return global.cache[roomName][DCONT];
+};
+
 global.getDestLinks = function(roomName){
     if(!global.cache){
         global.cache = {};
@@ -476,54 +697,77 @@ global.getSourceLinks = function(roomName){
     return global.cache[roomName][SLINK];
 };
 
-global.getSourceContainers = function(roomName){
-    if(!global.cache){
-        global.cache = {};
-    }
-    if(!global.cache[roomName]){
-        global.cache[roomName] = {};
-    }
-    if(!global.cache[roomName].sContainers){
-        if(!Memory.cache){
-            return;
-        }
-        if(!Memory.cache.roomPlan){
-            return;
-        }
-        if(!Memory.cache.roomPlan[roomName]){
-            return;
-        }
-        const sources = global.getSources(roomName);
-        const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER).filter(container => {
-            return sources.some(source => container.pos.inRangeTo(source.pos, 3));
-        });
+// global.getSourceContainers = function(roomName){
+//     if(!global.cache){
+//         global.cache = {};
+//     }
+//     if(!global.cache[roomName]){
+//         global.cache[roomName] = {};
+//     }
+//     if(!global.cache[roomName].sContainers){
+//         if(!Memory.cache){
+//             return;
+//         }
+//         if(!Memory.cache.roomPlan){
+//             return;
+//         }
+//         if(!Memory.cache.roomPlan[roomName]){
+//             return;
+//         }
+//         const sources = global.getSources(roomName);
+//         const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER).filter(container => {
+//             return sources.some(source => container.pos.inRangeTo(source.pos, 3));
+//         });
 
-        global.cache[roomName][SCONT] = containers;
-    }
+//         global.cache[roomName][SCONT] = containers;
+//     }
 
-    return global.cache[roomName][SCONT];
-};
+//     return global.cache[roomName][SCONT];
+// };
+
+// global.getDestContainers = function(roomName){
+//     if(!global.cache){
+//         global.cache = {};
+//     }
+//     if(!global.cache[roomName]){
+//         global.cache[roomName] = {};
+//     }
+//     if(!global.cache[roomName].sContainers){
+//         if(!Memory.cache){
+//             return;
+//         }
+//         if(!Memory.cache.roomPlan){
+//             return;
+//         }
+//         if(!Memory.cache.roomPlan[roomName]){
+//             return;
+//         }
+//         const sources = global.getSources(roomName);
+//         const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER).filter(container => {
+//             return !sources.some(source => container.pos.inRangeTo(source.pos, 3)) && !container.pos.inRangeTo(!Game.rooms[roomName].controller, 3);
+//         });
+
+//         global.cache[roomName][DCONT] = containers;
+//     }
+
+//     return global.cache[roomName][DCONT];
+// };
 
 function findClosestHighwayRoom(roomName) {
     const { x, y } = getRoomCoordinates(roomName);
 
-    // Helper function to compute Manhattan distance
     function manhattanDistance(x1, y1, x2, y2) {
         return Math.abs(x1 - x2) + Math.abs(y1 - y2);
     }
 
-    // Generate a list of possible highway rooms
     const highwayRooms = [];
 
-    // Add all potential highway rooms at x:0 and x:30
     highwayRooms.push({ x: 0, y });
     highwayRooms.push({ x: 30, y });
 
-    // Add all potential highway rooms at y:0 and y:30
     highwayRooms.push({ x, y: 0 });
     highwayRooms.push({ x, y: 30 });
 
-    // Find the closest highway room
     let closestRoom = null;
     let minDistance = Infinity;
 
@@ -535,15 +779,13 @@ function findClosestHighwayRoom(roomName) {
         }
     }
 
-    // Convert closestRoom coordinates back to room name
     if (closestRoom) {
         return getRoomNameFromCoordinates(closestRoom.x, closestRoom.y);
     }
 
-    return null; // No highway room found (unlikely in valid Screeps map)
+    return null;
 }
 
-// Helper to parse room coordinates
 function getRoomCoordinates(roomName) {
     const match = roomName.match(/([WE])(\d+)([NS])(\d+)/);
     if (!match) {
@@ -556,7 +798,6 @@ function getRoomCoordinates(roomName) {
     return { x, y };
 }
 
-// Helper to convert coordinates back to room name
 function getRoomNameFromCoordinates(x, y) {
     const xDir = x < 0 ? 'W' : 'E';
     const yDir = y < 0 ? 'S' : 'N';
@@ -727,6 +968,7 @@ module.exports.loop = function() {
         const roomName = room_spawn.room.name;
         roomPlanCacher(roomName);
         roomLinksCacher(roomName);
+        roomContainerCacher(roomName);
         TowerCACHE(room_spawn);
 
         //towers
@@ -994,37 +1236,37 @@ module.exports.loop = function() {
             var harvester_upgr = HarvesterUpgr.get(room_spawn.room.name);
             if((harvesters.length - reserve_harvesters.length) < maxHarvesters && testIfCanSpawn == 0){
                 var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Harvester_BP, newHarvesterName,
+                room_spawn.spawnCreep(Harvester_BP, base62Encode(newHarvesterName),
                     {memory: {role: 'harvester'}});
             }
             if(upgraders.length < maxUpgraders && (harvesters.length >= maxHarvesters && centers.length >= maxCenters) && testIfCanSpawn == 0){
                 var newUpgraderName = 'U_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Ugrader_BP, newUpgraderName,
+                room_spawn.spawnCreep(Ugrader_BP, base62Encode(newUpgraderName),
                     {memory: {role: 'upgrader'}});
             }
             if(builders.length < maxBuilders && harvesters.length == maxHarvesters && global.getConstructionSites(room_spawn.room.name).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
                 var newBuilderName = 'B_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Builder_BP, newBuilderName,
+                room_spawn.spawnCreep(Builder_BP, base62Encode(newBuilderName),
                     {memory: {role: 'builder'}});
             }
             if(transfers.length < maxTransferers && harvesters.length == maxHarvesters && global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
                 var newTransferName = 'T_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
+                room_spawn.spawnCreep(Trasnferer_BP, base62Encode(newTransferName),
                     {memory: {role: 'transfer'}});
             }
             if(centers.length < maxCenters && /*global.getCachedStructures(roomName, STRUCTURE_LINK).concat(getCachedStructures(roomName, STRUCTURE_CONTAINER)).length >= 1 &&*/ testIfCanSpawnC == 0 && testIfCanSpawn == 0){
                 var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(CenterBP, newCenterName,
+                room_spawn.spawnCreep(CenterBP, base62Encode(newCenterName),
                     {memory: {role: 'center'}});
             }
             if(harvester_upgr.length < maxHarvestersUpgr && harvesters.length == maxHarvesters && global.getSources(room_spawn.room.name).length >= 2 && testIfCanSpawn == 0 && upgraders.length == maxUpgraders) {
                 var newHarvesterUpgrName = 'HU_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(HarvesterUpgr_BP, newHarvesterUpgrName,
+                room_spawn.spawnCreep(HarvesterUpgr_BP, base62Encode(newHarvesterUpgrName),
                     {memory: {role: 'harvester_upgr'}});
             }
             if(harvesters.length < 1 && testIfCanSpawn != 0){
                 var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep([WORK,CARRY,MOVE], newHarvesterName,
+                room_spawn.spawnCreep([WORK,CARRY,MOVE], base62Encode(newHarvesterName),
                     {memory: {role: 'harvester'}});
             }
             if(centers.length < 1 && centers.length < maxCenters && (testIfCanSpawn == -6 || testIfCanSpawnC == -6)){
@@ -1036,19 +1278,19 @@ module.exports.loop = function() {
             var claimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'claimer');
             if(claimers.length < maxClaimers && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
                 var newClaimerName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Claimer_BP, newClaimerName,
+                room_spawn.spawnCreep(Claimer_BP, base62Encode(newClaimerName),
                     {memory: {role: 'claimer'}});
             }
             var builders_m = _.filter(Game.creeps, (creep) => creep.memory.role === 'builder_m');
             if(builders_m.length < maxBuildersM && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
                 var newBuilderMName = 'BM_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Builder_M_BP, newBuilderMName,
+                room_spawn.spawnCreep(Builder_M_BP, base62Encode(newBuilderMName),
                     {memory: {role: 'builder_m'}});
             }
             var remoteClaimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'remote_claimer');
             if(remoteClaimers.length < 0 && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0 && room_spawn.room.controller.level == 8){
                 var newName = 'RC_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY], newName,
+                room_spawn.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY], base62Encode(newName),
                     {memory: {role: 'remote_claimer'}});
             }
 

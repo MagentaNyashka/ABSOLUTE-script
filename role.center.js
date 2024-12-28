@@ -57,6 +57,7 @@ var roleCenter = {
             if (targetStructure) {
                 new RoomVisual(roomName).circle(targetStructure.pos, {fill: '#00ff00', opacity: 0.5, radius: 0.55});
                 const status = creep.transfer(targetStructure, RESOURCE_ENERGY);
+                if(status === OK){return;}
                 if(status === ERR_NOT_IN_RANGE) {
                     creep.moveTo(targetStructure, { visualizePathStyle: { stroke: '#ffffff' } });
                 } else {
@@ -155,7 +156,7 @@ Cus I don’t want you hearing about me
         }
         else {
             if(!creep.memory.target){
-                const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER).filter(s => s.store[RESOURCE_ENERGY] > 0);
+                const containers = global.getSourceContainers(roomName).filter(s => s.store[RESOURCE_ENERGY] > 0);
                 if(containers.length > 0){
                     creep.memory.target = creep.pos.findClosestByRange(containers).id;
                 }
