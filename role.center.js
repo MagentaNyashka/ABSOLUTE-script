@@ -24,6 +24,15 @@ var roleCenter = {
                         creep.memory.target = towers[0].id;
                     }
                     else{
+                        const sources = global.getSources(roomName);
+                        const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER).filter(container => {
+                            return !sources.some(source => container.pos.inRangeTo(source.pos, 3)) && container.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                        });
+                        if(containers.length > 0){
+                            containers.sort(function(a, b){return a.store.getFreeCapacity(RESOURCE_ENERGY) - b.store.getFreeCapacity(RESOURCE_ENERGY)});
+                            creep.memory.target = containers[0].id;
+                        }
+                        else{
                         const nukers = global.getCachedStructures(roomName, STRUCTURE_NUKER).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
                         if(nukers.length > 0){
                             creep.memory.target = nukers[0].id;
@@ -35,8 +44,9 @@ var roleCenter = {
                             }
                             else{
                                 const storages = Game.rooms[roomName].storage;
-                                if(storages && storages.store.getFreeCapacity(RESOURCE_ENERGY) > 0){
-                                    creep.memory.target = storages.id;
+                                    if(storages && storages.store.getFreeCapacity(RESOURCE_ENERGY) > 0){
+                                        creep.memory.target = storages.id;
+                                    }
                                 }
                             }
                         }
@@ -145,14 +155,14 @@ Cus I don’t want you hearing about me
         }
         else {
             if(!creep.memory.target){
-                const sources = global.getCachedStructures(roomName, STRUCTURE_CONTAINER).filter(s => s.store[RESOURCE_ENERGY] > 0);
-                if(sources.length > 0){
-                    creep.memory.target = creep.pos.findClosestByRange(sources).id;
+                const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER).filter(s => s.store[RESOURCE_ENERGY] > 0);
+                if(containers.length > 0){
+                    creep.memory.target = creep.pos.findClosestByRange(containers).id;
                 }
                 else{
                     const links = global.getDestLinks(roomName);
                     const closestLink = creep.pos.findClosestByRange(links);
-                    if(closestLink.store[RESOURCE_ENERGY] > 0){
+                    if(closestLink && closestLink.store[RESOURCE_ENERGY] > 0){
                         creep.memory.target = closestLink.id;
                     }
                     else{

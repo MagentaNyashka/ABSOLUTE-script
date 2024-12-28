@@ -55,6 +55,7 @@ function totalRemoteSources(){
 
 const SLINK = "sourceLinks";
 const DLINK = "destinationLinks";
+const SCONT = "sourceContainers";
 
 var price_old = -100;
 var price_old_x = -100;
@@ -475,6 +476,34 @@ global.getSourceLinks = function(roomName){
     return global.cache[roomName][SLINK];
 };
 
+global.getSourceContainers = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName].sContainers){
+        if(!Memory.cache){
+            return;
+        }
+        if(!Memory.cache.roomPlan){
+            return;
+        }
+        if(!Memory.cache.roomPlan[roomName]){
+            return;
+        }
+        const sources = global.getSources(roomName);
+        const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER).filter(container => {
+            return sources.some(source => container.pos.inRangeTo(source.pos, 3));
+        });
+
+        global.cache[roomName][SCONT] = containers;
+    }
+
+    return global.cache[roomName][SCONT];
+};
+
 function findClosestHighwayRoom(roomName) {
     const { x, y } = getRoomCoordinates(roomName);
 
@@ -584,6 +613,16 @@ function readCreepRolesFromIntershardMemory(shard) {
     return parsedData.creepRoles || {};
 }
 
+function getBaseLevel(activeExtensions) {
+    const levelExtensions = [0, 5, 10, 20, 30, 40, 50, 60];
+    
+    for (let level = 8; level > 0; level--) {
+        if (activeExtensions >= levelExtensions[level - 1]) {
+            return level;
+        }
+    }
+    return 0;
+}
 
 function findSafeRoute(originRoom, targetRoom) {
     const route = Game.map.findRoute(originRoom, targetRoom, {
@@ -609,9 +648,68 @@ function findSafeRoute(originRoom, targetRoom) {
     return route;
 }
 
+function getObjectSizeInBytes(obj) {
+    const jsonString = JSON.stringify(obj);
+    return Buffer.byteLength(jsonString, 'utf8');
+}
+
+global.getFreeSources = function(roomName, sourceId) {
+    if (!global.sources) {
+        global.sources = {};
+    }
+    if (!global.sources[roomName]) {
+        global.sources[roomName] = {};
+    }
+    if (!global.sources[roomName][sourceId]) {
+        global.sources[roomName][sourceId] = {};
+    }
+    if (!global.sources[roomName][sourceId].freePositions) {
+        if (!Memory.cache) {
+            return;
+        }
+        if (!Memory.cache.roomPlan) {
+            return;
+        }
+        if (!Memory.cache.roomPlan[roomName]) {
+            return;
+        }
+        const sources = global.getSources(roomName);
+        const terrain = Game.map.getRoomTerrain(roomName);
+        const freeSections = sources.map(source => {
+            const freePositions = [];
+            
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+        
+                    const x = source.pos.x + dx;
+                    const y = source.pos.y + dy;
+        
+                    if (terrain.get(x, y) !== TERRAIN_MASK_WALL) {
+                        freePositions.push(new RoomPosition(x, y, roomName));
+                    }
+                }
+            }
+        
+            return {
+                sourceId: source.id,
+                freePositions: freePositions
+            };
+        });
+
+        freeSections.forEach(section => {
+            global.sources[roomName][section.sourceId] = {
+                freePositions: section.freePositions
+            };
+        });
+    }
+
+    return global.sources[roomName][sourceId].freePositions;
+};
 
 profiler.enable();
 module.exports.loop = function() {
+    // if(Game.shard.name === 'shard2'){console.log(Math.min(global.getFreeSources('E1N29', global.getSources('E1N29')[0].id).length,2));}   
     // console.log(findClosestHighwayRoom('E1N24'));
     //clearConsole();
     profiler.wrap(function() {
@@ -684,184 +782,187 @@ module.exports.loop = function() {
         }
 
         
+        let room_level = "L0";
+        let Harvester_BP = [WORK,CARRY,MOVE];
+        let maxHarvesters = 1;
+        let Ugrader_BP = [WORK,CARRY,MOVE];
+        let maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
+        let Builder_BP = [WORK,CARRY,CARRY,MOVE];
+        let maxBuilders = 1;
+        let maxCenters = 1;
+        let CenterBP = [WORK,WORK,CARRY,MOVE];
+        let maxTransferers = 0;
+        let Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
+        let maxClaimers = 0;
+        let Claimer_BP = [CLAIM, MOVE];
+        let maxBuildersM = 0;
+        let Builder_M_BP = [WORK,CARRY,MOVE];
+        let maxHarvestersUpgr = 0;
+        let HarvesterUpgr_BP = [WORK,CARRY,MOVE];
 
         const Extensions = global.getCachedStructures(roomName, STRUCTURE_EXTENSION);
-        {
-        var room_level = "L0";
-        var Harvester_BP = [WORK,CARRY,MOVE];
-        var maxHarvesters = 1;
-        var Ugrader_BP = [WORK,CARRY,MOVE];
-        var maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
-        var Builder_BP = [WORK,CARRY,CARRY,MOVE];
-        var maxBuilders = 1;
-        var maxCenters = 1;
-        var CenterBP = [WORK,WORK,CARRY,MOVE];
-        var maxHarvestersUpgr = 1;
-        var HarvesterUpgr_BP = [WORK,WORK,CARRY,MOVE];
-        var maxTransferers = 0;
-        var Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
-        var maxClaimers = 0;
-        var Claimer_BP = [CLAIM, MOVE];
-        var maxBuildersM = 0;
-        var Builder_M_BP = [WORK,CARRY,MOVE];
+        const roomLevel = getBaseLevel(Extensions.length);
+        switch(roomLevel){
+            case 0:
+                room_level = "L0";
+                Harvester_BP = [WORK,CARRY,MOVE];
+                maxHarvesters = 1;
+                Ugrader_BP = [WORK,CARRY,MOVE];
+                maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
+                Builder_BP = [WORK,CARRY,CARRY,MOVE];
+                maxBuilders = 1;
+                maxCenters = 1;
+                CenterBP = [WORK,WORK,CARRY,MOVE];
+                maxTransferers = 0;
+                Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
+                maxClaimers = 0;
+                Claimer_BP = [CLAIM, MOVE];
+                maxBuildersM = 0;
+                Builder_M_BP = [WORK,CARRY,MOVE];
+                break;
+            case 1:
+                room_level = "L1";
+                Harvester_BP = [WORK,WORK,CARRY,MOVE];
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,3);
+                Ugrader_BP = [WORK,WORK,CARRY,MOVE];
+                maxUpgraders = adjustMaxUpgradersByEnergy(3, roomName);
+                Builder_BP = [WORK,CARRY,CARRY,MOVE];
+                maxBuilders = 3;
+                maxCenters = global.getSourceContainers(roomName).length || 1;
+                CenterBP = [CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
+                maxTransferers = 3;
+                Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
+                maxClaimers = 0;
+                Claimer_BP = [CLAIM, MOVE];
+                maxBuildersM = 0;
+                Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                break;
+            case 2:
+                room_level = "L2";
+                Harvester_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,2);
+                Ugrader_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
+                maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
+                maxBuilders = 2;
+                Builder_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
+                maxCenters = global.getSourceContainers(roomName).length || 1;
+                CenterBP = [CARRY, MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
+                maxTransferers = 0;
+                Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
+                maxClaimers = 0;
+                Claimer_BP = [CLAIM, MOVE];
+                maxBuildersM = 0;
+                Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                break;
+            case 3:
+                room_level = "L3";
+                Harvester_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,2);
+                Ugrader_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
+                maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
+                Builder_BP = [WORK,WORK,CARRY,CARRY,MOVE,MOVE];
+                maxBuilders = 1;
+                maxCenters = global.getSourceContainers(roomName).length || 1;
+                CenterBP = [MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY];
+                maxTransferers = 0;
+                Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
+                maxClaimers = 0;
+                Claimer_BP = [CLAIM, MOVE];
+                maxBuildersM = 0;
+                Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                break;
+            case 4:
+                room_level = "L4";
+                Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,2);
+                Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
+                Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                maxBuilders = 1;
+                maxCenters = global.getSourceContainers(roomName).length || 1;
+                CenterBP = [CARRY, MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
+                maxTransferers = 0;
+                Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
+                maxClaimers = 0;
+                Claimer_BP = [CLAIM, MOVE];
+                maxBuildersM = 0;
+                Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                break;
+            case 5:
+                room_level = "L5";
+                Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,2);
+                Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
+                Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                maxBuilders = 1;
+                maxCenters = global.getSourceContainers(roomName).length || 1;
+                CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                maxTransferers = 0;
+                Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
+                maxClaimers = 0;
+                Claimer_BP = [CLAIM, MOVE];
+                maxBuildersM = 0;
+                Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                break;
+            case 6:
+                room_level = "L6";
+                Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,2);
+                Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
+                Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                maxBuilders = 1;
+                maxCenters = global.getSourceContainers(roomName).length || 1;
+                CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                maxTransferers = 0;
+                Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
+                maxClaimers = 0;
+                Claimer_BP = [CLAIM, MOVE];
+                maxBuildersM = 0;
+                Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                break;
+            case 7:
+                room_level = "L7";
+                Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,2);
+                Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
+                Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                maxBuilders = 1;
+                maxCenters = global.getSourceContainers(roomName).length || 1;
+                CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                maxTransferers = 0;
+                Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
+                maxClaimers = 0;
+                Claimer_BP = [CLAIM, MOVE];
+                maxBuildersM = 0;
+                Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                break;
+            case 8:
+                room_level = "L8";
+                Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,2);
+                Ugrader_BP = [WORK,CARRY,MOVE];
+                maxUpgraders = 1;
+                Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                maxBuilders = 1;
+                maxCenters = global.getSourceContainers(roomName).length || 1;
+                CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                maxTransferers = 1;
+                Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
+                maxClaimers = 0;
+                Claimer_BP = [CLAIM, MOVE];
+                maxBuildersM = 0;
+                Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                break;
         }
-
-        if(Extensions.length < 5){
-            var room_level = "L1";
-            var Harvester_BP = [WORK,WORK,CARRY,MOVE];
-            var maxHarvesters = 3;
-            var Ugrader_BP = [WORK,WORK,CARRY,MOVE];
-            var maxUpgraders = adjustMaxUpgradersByEnergy(3, roomName);
-            var Builder_BP = [WORK,CARRY,CARRY,MOVE];
-            var maxBuilders = 3;
-            var maxCenters = 1;
-            var CenterBP = [CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
-            var maxHarvestersUpgr = 3;
-            var HarvesterUpgr_BP = [WORK,WORK,CARRY,MOVE];
-            var maxTransferers = 3;
-            var Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
-            var maxClaimers = 0;
-            var Claimer_BP = [CLAIM, MOVE];
-            var maxBuildersM = 0;
-            var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+        if(global.getSources(roomName).length > 1){
+            maxHarvestersUpgr = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[1].id).length,maxHarvesters);
+            HarvesterUpgr_BP = Harvester_BP;
         }
-        if(Extensions.length < 10 && Extensions.length >= 5){
-            var room_level = "L2";
-            var Harvester_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
-            var maxHarvesters = 1;
-            var Ugrader_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
-            var maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
-            var maxBuilders = 2;
-            var Builder_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
-            var maxCenters = 1;
-            var CenterBP = [CARRY, MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
-            var maxHarvestersUpgr = 1;
-            var HarvesterUpgr_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
-            var maxTransferers = 0;
-            var Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
-            var maxClaimers = 0;
-            var Claimer_BP = [CLAIM, MOVE];
-            var maxBuildersM = 0;
-            var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-        }
-        if(Extensions.length < 20 && Extensions.length >= 10){
-            var room_level = "L3";
-            var Harvester_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
-            var maxHarvesters = 2;
-            var Ugrader_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
-            var maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
-            var Builder_BP = [WORK,WORK,CARRY,CARRY,MOVE,MOVE];
-            var maxBuilders = 1;
-            var maxCenters = 1;
-            var CenterBP = [CARRY, MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
-            var maxHarvestersUpgr = 1;
-            var HarvesterUpgr_BP = [WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE,MOVE];
-            var maxTransferers = 0;
-            var Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
-            var maxClaimers = 0;
-            var Claimer_BP = [CLAIM, MOVE];
-            var maxBuildersM = 0;
-            var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-        }
-        if(Extensions.length < 30 && Extensions.length >= 20){
-            var room_level = "L4";
-            var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
-            var maxHarvesters = 2;
-            var Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
-            var maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
-            var Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
-            var maxBuilders = 1;
-            var maxCenters = 1;
-            var CenterBP = [CARRY, MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
-            var maxHarvestersUpgr = 2;
-            var HarvesterUpgr_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,MOVE,MOVE,MOVE,MOVE];
-            var maxTransferers = 0;
-            var Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
-            var maxZavodskoy = 0;
-            var Zavodskoy_BP = [CARRY,CARRY,MOVE,MOVE];
-            var maxMiners = 0;
-            var Miner_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE];
-            var maxClaimers = 0;
-            var Claimer_BP = [CLAIM, MOVE];
-            var maxBuildersM = 0;
-            var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-        }
-        if(Extensions.length < 40 && Extensions.length >= 30){
-            var room_level = "L5";
-            var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
-            var maxHarvesters = 1;
-            var Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
-            var Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxBuilders = 1;
-            var maxCenters = 1;
-            var CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxHarvestersUpgr = 1;
-            var HarvesterUpgr_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
-            var maxTransferers = 0;
-            var Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
-            var maxClaimers = 0;
-            var Claimer_BP = [CLAIM, MOVE];
-            var maxBuildersM = 0;
-            var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-        }
-        if(Extensions.length < 50 && Extensions.length >= 40){
-            var room_level = "L6";
-            var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
-            var maxHarvesters = 1;
-            var Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
-            var Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
-            var maxBuilders = 1;
-            var maxCenters = 1;
-            var CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxHarvestersUpgr = 1;
-            var HarvesterUpgr_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
-            var maxTransferers = 0;
-            var Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
-            var maxClaimers = 0;
-            var Claimer_BP = [CLAIM, MOVE];
-            var maxBuildersM = 0;
-            var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-        }
-        if(Extensions.length < 60 && Extensions.length >= 50 ){
-            var room_level = "L7";
-            var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
-            var maxHarvesters = 1;
-            var Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
-            var maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
-            var Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
-            var maxBuilders = 1;
-            var maxCenters = 1;
-            var CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxHarvestersUpgr = 1;
-            var HarvesterUpgr_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
-            var maxTransferers = 0;
-            var Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
-            var maxClaimers = 0;
-            var Claimer_BP = [CLAIM, MOVE];
-            var maxBuildersM = 0;
-            var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-        }
-        if(Extensions.length >= 60 ){
-            var room_level = "L8";
-            var Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
-            var maxHarvesters = 1;
-            var Ugrader_BP = [WORK,CARRY,MOVE];
-            var maxUpgraders = 1;
-            var Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
-            var maxBuilders = 1;
-            var maxCenters = 1;
-            var CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-            var maxHarvestersUpgr = 1;
-            var HarvesterUpgr_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
-            var maxTransferers = 1;
-            var Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
-            var maxClaimers = 0;
-            var Claimer_BP = [CLAIM, MOVE];
-            var maxBuildersM = 0;
-            var Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
-    
+        else{
+            maxHarvestersUpgr = 0;
         }
         try{
             render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHarvestersUpgr, maxTransferers, maxCenters);
@@ -896,7 +997,7 @@ module.exports.loop = function() {
                 room_spawn.spawnCreep(Harvester_BP, newHarvesterName,
                     {memory: {role: 'harvester'}});
             }
-            if(upgraders.length < maxUpgraders && ((harvesters.length >= maxHarvesters && centers.length >= maxCenters) || room_spawn.room.controller.ticksToDowngrade < 15000) && testIfCanSpawn == 0){
+            if(upgraders.length < maxUpgraders && (harvesters.length >= maxHarvesters && centers.length >= maxCenters) && testIfCanSpawn == 0){
                 var newUpgraderName = 'U_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 room_spawn.spawnCreep(Ugrader_BP, newUpgraderName,
                     {memory: {role: 'upgrader'}});
@@ -911,7 +1012,7 @@ module.exports.loop = function() {
                 room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
                     {memory: {role: 'transfer'}});
             }
-            if(centers.length < maxCenters && global.getCachedStructures(roomName, STRUCTURE_LINK).length >= 1 && testIfCanSpawnC == 0 && testIfCanSpawn == 0){
+            if(centers.length < maxCenters && /*global.getCachedStructures(roomName, STRUCTURE_LINK).concat(getCachedStructures(roomName, STRUCTURE_CONTAINER)).length >= 1 &&*/ testIfCanSpawnC == 0 && testIfCanSpawn == 0){
                 var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 room_spawn.spawnCreep(CenterBP, newCenterName,
                     {memory: {role: 'center'}});
@@ -926,9 +1027,9 @@ module.exports.loop = function() {
                 room_spawn.spawnCreep([WORK,CARRY,MOVE], newHarvesterName,
                     {memory: {role: 'harvester'}});
             }
-            if(centers.length < 1 && centers.length < maxCenters && testIfCanSpawn == -6){
+            if(centers.length < 1 && centers.length < maxCenters && (testIfCanSpawn == -6 || testIfCanSpawnC == -6)){
                 var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep([CARRY,MOVE,CARRY,MOVE,CARRY,MOVE], newCenterName,
+                room_spawn.spawnCreep([CARRY,MOVE,CARRY,MOVE], newCenterName,
                     {memory: {role: 'center'}});
             }
 

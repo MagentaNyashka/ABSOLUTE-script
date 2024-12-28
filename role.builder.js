@@ -23,8 +23,11 @@ var roleBuilder = {
             const target = Game.getObjectById(creep.memory.target);
             if (target) {
                 new RoomVisual(roomName).circle(target.pos, { fill: '#ffffff', opacity: 0.5, radius: 0.55 });
-                if (creep.build(target) === ERR_NOT_IN_RANGE) {
+                const status = creep.build(target);
+                if(status === OK){return;}
+                if (status === ERR_NOT_IN_RANGE) {
                     creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+                    return;
                 } else {
                     delete creep.memory.target;
                 }
