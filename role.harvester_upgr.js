@@ -70,7 +70,7 @@ var roleHarvesterUpgr = {
     run: function(creep) {
         const roomName = creep.room.name;
 
-        const energyStructures = global.getCachedStructures(roomName, STRUCTURE_LINK).concat(global.getCachedStructures(roomName, STRUCTURE_CONTAINER));
+        const energyStructures = global.getCachedStructures(roomName, STRUCTURE_LINK).concat(global.getSourceContainers(roomName));
 
         const sources = global.getSources(roomName);
 
