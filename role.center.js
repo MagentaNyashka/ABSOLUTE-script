@@ -16,7 +16,13 @@ var roleCenter = {
             if (!creep.memory.target) {
                 const extentions = global.getCachedStructures(roomName, STRUCTURE_EXTENSION).concat(global.getCachedStructures(roomName,STRUCTURE_SPAWN)).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
                 if(extentions.length > 0){
-                    creep.memory.target = creep.pos.findClosestByPath(extentions).id;
+                    const target = creep.pos.findClosestByPath(extentions);
+                    if(target){
+                        creep.memory.target = target.id;
+                    }
+                    else{
+                        creep.memory.target = creep.pos.findClosestByRange(extentions).id;
+                    }
                 }
                 else{
                     const towers = global.getCachedStructures(roomName, STRUCTURE_TOWER).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
@@ -158,7 +164,8 @@ Cus I don’t want you hearing about me
             if(!creep.memory.target){
                 const containers = global.getSourceContainers(roomName).filter(s => s.store[RESOURCE_ENERGY] > 0);
                 if(containers.length > 0){
-                    creep.memory.target = creep.pos.findClosestByRange(containers).id;
+                    creep.memory.target = containers.sort((a, b) => b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY])[0].id;
+                    // creep.memory.target = creep.pos.findClosestByRange(containers).id;
                 }
                 else{
                     const links = global.getDestLinks(roomName);

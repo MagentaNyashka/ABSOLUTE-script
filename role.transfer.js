@@ -1,5 +1,5 @@
 var roleTransfer = {
-    run: function(creep, Power_Spawns, Nukers, Terminals) {
+    run: function(creep) {
         const roomName = creep.room.name;
         const power_spawn = global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN);
         // const nuker = Nukers.get(creep.room.name).filter((structure) => structure.store.getFreeCapacity(RESOURCE_GHODIUM) >= creep.store.getFreeCapacity());
@@ -60,7 +60,7 @@ var roleTransfer = {
                     creep.memory.resource = RESOURCE_GHODIUM;
                 }
                 else{
-                    if(power_spawn[0].store.getFreeCapacity(RESOURCE_POWER) >= creep.store.getCapacity()){
+                    if(power_spawn[0].store.getFreeCapacity(RESOURCE_POWER) > 50  && terminal.store[RESOURCE_POWER] >= 50){
                         creep.memory.target = terminal.id;
                         creep.memory.resource = RESOURCE_POWER;
                     }

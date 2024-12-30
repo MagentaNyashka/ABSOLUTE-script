@@ -1,3 +1,4 @@
+//ну это пиздец нахуй я ебал
 var roleHarvester = require('role.harvester');
 var roleUpgrader = require('role.upgrader'); 
 var roleBuilder = require('role.builder');
@@ -1115,14 +1116,14 @@ module.exports.loop = function() {
                 break;
             case 4:
                 room_level = "L4";
-                Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
-                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,2);
-                Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,1);
+                Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];   
                 maxUpgraders = adjustMaxUpgradersByEnergy(2, roomName);
                 Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
                 maxBuilders = 1;
                 maxCenters = global.getSourceContainers(roomName).length || 1;
-                CenterBP = [CARRY, MOVE,CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
+                CenterBP = [MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY];
                 maxTransferers = 0;
                 Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
                 maxClaimers = 0;
@@ -1133,7 +1134,7 @@ module.exports.loop = function() {
             case 5:
                 room_level = "L5";
                 Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE];
-                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,2);
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,1);
                 Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
                 maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
                 Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
@@ -1150,7 +1151,7 @@ module.exports.loop = function() {
             case 6:
                 room_level = "L6";
                 Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
-                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,2);
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,1);
                 Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
                 maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
                 Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
@@ -1167,7 +1168,7 @@ module.exports.loop = function() {
             case 7:
                 room_level = "L7";
                 Harvester_BP = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,MOVE,MOVE]
-                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,2);
+                maxHarvesters = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[0].id).length,1);
                 Ugrader_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
                 maxUpgraders = adjustMaxUpgradersByEnergy(1, roomName);
                 Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
@@ -1222,6 +1223,7 @@ module.exports.loop = function() {
         if(spawn_list.length == 0){
             spawn_list[0] = room_spawn;
         }
+
         CACHE_CREEPS(room_spawn);
         _.forEach(spawn_list, function(room_spawn){
             var testIfCanSpawn = room_spawn.spawnCreep(Harvester_BP, 'dry',{ dryRun: true });
@@ -1234,39 +1236,40 @@ module.exports.loop = function() {
             var transfers = Transfers.get(room_spawn.room.name);
             var centers = Centers.get(room_spawn.room.name);
             var harvester_upgr = HarvesterUpgr.get(room_spawn.room.name);
+
             if((harvesters.length - reserve_harvesters.length) < maxHarvesters && testIfCanSpawn == 0){
                 var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Harvester_BP, base62Encode(newHarvesterName),
+                room_spawn.spawnCreep(Harvester_BP, newHarvesterName,
                     {memory: {role: 'harvester'}});
             }
             if(upgraders.length < maxUpgraders && (harvesters.length >= maxHarvesters && centers.length >= maxCenters) && testIfCanSpawn == 0){
                 var newUpgraderName = 'U_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Ugrader_BP, base62Encode(newUpgraderName),
+                room_spawn.spawnCreep(Ugrader_BP, newUpgraderName,
                     {memory: {role: 'upgrader'}});
             }
             if(builders.length < maxBuilders && harvesters.length == maxHarvesters && global.getConstructionSites(room_spawn.room.name).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
                 var newBuilderName = 'B_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Builder_BP, base62Encode(newBuilderName),
+                room_spawn.spawnCreep(Builder_BP, newBuilderName,
                     {memory: {role: 'builder'}});
             }
             if(transfers.length < maxTransferers && harvesters.length == maxHarvesters && global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
                 var newTransferName = 'T_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Trasnferer_BP, base62Encode(newTransferName),
+                room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
                     {memory: {role: 'transfer'}});
             }
             if(centers.length < maxCenters && /*global.getCachedStructures(roomName, STRUCTURE_LINK).concat(getCachedStructures(roomName, STRUCTURE_CONTAINER)).length >= 1 &&*/ testIfCanSpawnC == 0 && testIfCanSpawn == 0){
                 var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(CenterBP, base62Encode(newCenterName),
+                room_spawn.spawnCreep(CenterBP, newCenterName,
                     {memory: {role: 'center'}});
             }
             if(harvester_upgr.length < maxHarvestersUpgr && harvesters.length == maxHarvesters && global.getSources(room_spawn.room.name).length >= 2 && testIfCanSpawn == 0 && upgraders.length == maxUpgraders) {
                 var newHarvesterUpgrName = 'HU_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(HarvesterUpgr_BP, base62Encode(newHarvesterUpgrName),
+                room_spawn.spawnCreep(HarvesterUpgr_BP, newHarvesterUpgrName,
                     {memory: {role: 'harvester_upgr'}});
             }
             if(harvesters.length < 1 && testIfCanSpawn != 0){
                 var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep([WORK,CARRY,MOVE], base62Encode(newHarvesterName),
+                room_spawn.spawnCreep([WORK,CARRY,MOVE], newHarvesterName,
                     {memory: {role: 'harvester'}});
             }
             if(centers.length < 1 && centers.length < maxCenters && (testIfCanSpawn == -6 || testIfCanSpawnC == -6)){
@@ -1278,19 +1281,19 @@ module.exports.loop = function() {
             var claimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'claimer');
             if(claimers.length < maxClaimers && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
                 var newClaimerName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Claimer_BP, base62Encode(newClaimerName),
+                room_spawn.spawnCreep(Claimer_BP, newClaimerName,
                     {memory: {role: 'claimer'}});
             }
             var builders_m = _.filter(Game.creeps, (creep) => creep.memory.role === 'builder_m');
             if(builders_m.length < maxBuildersM && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
                 var newBuilderMName = 'BM_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep(Builder_M_BP, base62Encode(newBuilderMName),
+                room_spawn.spawnCreep(Builder_M_BP, newBuilderMName,
                     {memory: {role: 'builder_m'}});
             }
             var remoteClaimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'remote_claimer');
             if(remoteClaimers.length < 0 && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0 && room_spawn.room.controller.level == 8){
                 var newName = 'RC_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY], base62Encode(newName),
+                room_spawn.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY], newName,
                     {memory: {role: 'remote_claimer'}});
             }
 
