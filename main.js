@@ -1140,7 +1140,7 @@ module.exports.loop = function() {
                 Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
                 maxBuilders = 1;
                 maxCenters = global.getSourceContainers(roomName).length || 1;
-                CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                CenterBP = [MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY];
                 maxTransferers = 0;
                 Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
                 maxClaimers = 0;
@@ -1157,7 +1157,7 @@ module.exports.loop = function() {
                 Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
                 maxBuilders = 1;
                 maxCenters = global.getSourceContainers(roomName).length || 1;
-                CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                CenterBP = [MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY];
                 maxTransferers = 0;
                 Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
                 maxClaimers = 0;
@@ -1174,7 +1174,7 @@ module.exports.loop = function() {
                 Builder_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE];
                 maxBuilders = 1;
                 maxCenters = global.getSourceContainers(roomName).length || 1;
-                CenterBP = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+                CenterBP = [MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY];
                 maxTransferers = 0;
                 Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
                 maxClaimers = 0;
@@ -1274,7 +1274,7 @@ module.exports.loop = function() {
             }
             if(centers.length < 1 && centers.length < maxCenters && (testIfCanSpawn == -6 || testIfCanSpawnC == -6)){
                 var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                room_spawn.spawnCreep([CARRY,MOVE,CARRY,MOVE], newCenterName,
+                room_spawn.spawnCreep([CARRY,MOVE,CARRY,MOVE,CARRY,MOVE], newCenterName,
                     {memory: {role: 'center'}});
             }
 

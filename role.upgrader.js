@@ -78,7 +78,7 @@ var roleUpgrader = {
     run: function(creep) {
         const roomName = creep.room.name;
 
-        const energyStructures = global.getDestLinks(roomName).concat(global.getCachedStructures(roomName, STRUCTURE_CONTAINER));
+        const energyStructures = global.getDestLinks(roomName).concat(global.getControllerContainers(roomName));
         const storage = Game.rooms[roomName].storage;
 
         if (creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0 && creep.ticksToLive > 50) {
@@ -102,7 +102,7 @@ var roleUpgrader = {
                     creep.memory.target = storage.id;
                 } else {
                     const terminal = Game.rooms[roomName].terminal;
-                    if (terminal && terminal.store[RESOURCE_ENERGY] > 50000 && creep.room.controller.level != 8) {
+                    if (terminal && terminal.store[RESOURCE_ENERGY] > 1000 && creep.room.controller.level != 8) {
                         creep.memory.target = terminal.id;
                     } else {
                         if (energyStructures.length != 0) {
