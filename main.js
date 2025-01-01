@@ -882,8 +882,8 @@ function adjustCenterBP(roomName){
             pathLength *= 2;
         }
         while(!isAvailable){
-            const CARRY_count = pathLength / 2.5 / maxCenters;
-            let MOVE_count = CARRY_count / 2 / maxCenters;
+            const CARRY_count = Math.ceil(pathLength / 2.5 / maxCenters);
+            let MOVE_count = Math.ceil(CARRY_count / 2);
             if(sourcePath.length !== sourcePath.cost){
                 MOVE_count = CARRY_count;
             }
@@ -895,6 +895,7 @@ function adjustCenterBP(roomName){
             for(let i = 0; i < CARRY_count; i++){
                 BP.push(CARRY);
             }
+            console.log(roomName,BP);
             let cost = BP.length * 50;
             if(cost > room.energyCapacityAvailable || BP.length > 50){
                 maxCenters++;
@@ -931,7 +932,7 @@ function adjustUpgraderBP(roomName){
             work_Count++;
         }
         work_Count = work_Count / 2;
-        console.log(work_Count);
+        // console.log(work_Count);
         for(let j = 0; j < work_Count; j++){
             BP.push(MOVE);
         }
