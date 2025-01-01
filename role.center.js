@@ -1,13 +1,19 @@
 var roleCenter = {
     run: function(creep) {
         const roomName = creep.room.name;
+        // if(creep.memory.target && Game.time % 5 === 0){
+        //     if(Game.getObjectById(creep.memory.target).structureType === STRUCTURE_CONTAINER){
+        //         delete creep.memory.target;
+        //     }
+        // }
         //PRIORITY LIST:
-        //EXT/SPAWN -> TOWERS -> NUKER -> STORAGE/TERMINAL
+        //EXT/SPAWN -> TOWERS -> NUKER -> TERMINAL -> STORAGE
         if(creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0 && creep.ticksToLive > 5) {
             creep.memory.transferring = false;
             delete creep.memory.target;
         }
-        if(!creep.memory.transferring && creep.store.getFreeCapacity() == 0) {
+        // if(!creep.memory.transferring && creep.store.getFreeCapacity() == 0) {
+        if(!creep.memory.transferring && creep.store[RESOURCE_ENERGY] > 0) {
             creep.memory.transferring = true;
             delete creep.memory.target;
         }
@@ -25,7 +31,7 @@ var roleCenter = {
                     }
                 }
                 else{
-                    const towers = global.getCachedStructures(roomName, STRUCTURE_TOWER).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+                    const towers = global.getCachedStructures(roomName, STRUCTURE_TOWER).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 100);
                     if(towers.length > 0){
                         creep.memory.target = towers[0].id;
                     }
@@ -61,11 +67,15 @@ var roleCenter = {
             }
             const targetStructure = Game.getObjectById(creep.memory.target);
             if (targetStructure) {
-                new RoomVisual(roomName).circle(targetStructure.pos, {fill: '#00ff00', opacity: 0.5, radius: 0.55});
+                new RoomVisual(roomName).circle(targetStructure.pos, {fill: 'transparent',stroke: '#00ff00', strokeWidth: 0.03, opacity: 1, radius: 0.55});
                 const status = creep.transfer(targetStructure, RESOURCE_ENERGY);
-                if(status === OK){return;}
+                if(status === OK){
+                    delete creep.memory.target;
+                    return;
+                }
                 if(status === ERR_NOT_IN_RANGE) {
                     creep.moveTo(targetStructure, { visualizePathStyle: { stroke: '#ffffff' } });
+                    return;
                 } else {
                     delete creep.memory.target;
                 }
@@ -164,7 +174,8 @@ Cus I don’t want you hearing about me
             if(!creep.memory.target){
                 const containers = global.getSourceContainers(roomName).filter(s => s.store[RESOURCE_ENERGY] > 0);
                 if(containers.length > 0){
-                    creep.memory.target = containers.sort((a, b) => b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY])[0].id;
+                    containers.sort((a, b) => b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY]);
+                    creep.memory.target = containers[0].id;
                     // creep.memory.target = creep.pos.findClosestByRange(containers).id;
                 }
                 else{
@@ -189,11 +200,16 @@ Cus I don’t want you hearing about me
             }
             const targetStructure = Game.getObjectById(creep.memory.target);
             if (targetStructure) {
-                new RoomVisual(roomName).circle(targetStructure.pos, {fill: '#ff0000', opacity: 0.5, radius: 0.55});
+                new RoomVisual(roomName).circle(targetStructure.pos, {fill: 'transparent',stroke: '#ff0000', strokeWidth: 0.03, opacity: 1, radius: 0.55});
                 const status = creep.withdraw(targetStructure, RESOURCE_ENERGY);
+                if(status === OK){
+                    delete creep.memory.target;
+                    return;
+                }
                 if(status === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
-                } else if(status === ERR_NOT_ENOUGH_RESOURCES){
+                    creep.moveTo(targetStructure, { visualizePathStyle: { stroke: '#ffffff' } });
+                    return;
+                } else {
                     delete creep.memory.target;
                 }
             } else {

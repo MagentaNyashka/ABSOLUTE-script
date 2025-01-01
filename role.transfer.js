@@ -55,7 +55,7 @@ var roleTransfer = {
         }
         else{
             if(!creep.memory.target){
-                if(nuker.length > 0 && nuker.store.getFreeCapacity(RESOURCE_GHODIUM) >= creep.store.getFreeCapacity()){
+                if(nuker && nuker.length > 0 && nuker.store.getFreeCapacity(RESOURCE_GHODIUM) >= creep.store.getFreeCapacity()){
                     creep.memory.target = terminal.id;
                     creep.memory.resource = RESOURCE_GHODIUM;
                 }
@@ -64,7 +64,7 @@ var roleTransfer = {
                         creep.memory.target = terminal.id;
                         creep.memory.resource = RESOURCE_POWER;
                     }
-                    else{
+                    else if(power_spawn[0].store.getFreeCapacity(RESOURCE_ENERGY) > creep.store.getFreeCapacity(RESOURCE_ENERGY)){
                         creep.memory.target = terminal.id;
                         creep.memory.resource = RESOURCE_ENERGY;
                     }
