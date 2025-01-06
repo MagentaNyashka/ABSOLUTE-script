@@ -1,33 +1,25 @@
 var roleMiner = {
     run: function(creep) {
-        if(creep.memory.transferring && creep.store.getUsedCapacity() == 0){
-            creep.memory.transferring = false;
-        }
-        if(!creep.memory.transferring && creep.store.getFreeCapacity() == 0){
-            creep.memory.transferring = true;
-        }
-        if(creep.memory.transferring){
-            if(Game.time % 10 == 0){
-                var terminal = creep.room.find(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        return (
-                            structure.structureType == STRUCTURE_TERMINAL);
-                    }
-                });
+        const roomName = creep.room.name;
+        if(!creep.memory.target){
+            const mineral = creep.room.find(FIND_MINERALS)[0];
+            if(mineral){
+                creep.memory.target = mineral.id;
             }
-                if(creep.transfer(terminal[0], RESOURCE_OXYGEN) == ERR_NOT_IN_RANGE || creep.transfer(terminal[0], RESOURCE_HYDROGEN) == ERR_NOT_IN_RANGE || creep.transfer(terminal[0], RESOURCE_KEANIUM) == ERR_NOT_IN_RANGE || creep.transfer(terminal[0], RESOURCE_LEMERGIUM) == ERR_NOT_IN_RANGE || creep.transfer(terminal[0], RESOURCE_KEANIUM) == ERR_NOT_IN_RANGE || creep.transfer(terminal[0], RESOURCE_UTRIUM) == ERR_NOT_IN_RANGE || creep.transfer(terminal[0], RESOURCE_ZYNTHIUM) == ERR_NOT_IN_RANGE || creep.transfer(terminal[0], RESOURCE_CATALYST) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(terminal[0], {visualizePathStyle: {stroke: '#ffffff'}});
-                }
         }
-        else{
-            if(Game.time % 10 == 0){
-            var sources = creep.room.find(FIND_MINERALS);
+        const mCont = global.getMineralContainers(roomName);
+        const targetObject = Game.getObjectById(creep.memory.target);
+        let status;
+        if(mCont[0].store.getFreeCapacity() > 100){
+            status = creep.harvest(targetObject);
+            if(status === OK){
+                return;
             }
-            if(sources.length != 0){
-                if(creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(sources[0], {visualizePathStyle: {stroke: '#ffffff'}});
-                }
+            if(status === ERR_NOT_IN_RANGE || creep.pos !== mCont[0].pos){
+                creep.moveTo(mCont[0]);
+                return;
             }
+        return;
         }
     }
 };

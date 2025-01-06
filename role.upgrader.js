@@ -81,7 +81,7 @@ var roleUpgrader = {
         const energyStructures = global.getControllerLinks(roomName).concat(global.getControllerContainers(roomName));
         const storage = Game.rooms[roomName].storage;
 
-        if (creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0 && creep.ticksToLive > 50) {
+        if (creep.memory.transferring && creep.store[RESOURCE_ENERGY] == 0 && creep.ticksToLive > 5) {
             creep.memory.transferring = false;
             delete creep.memory.target;
         }

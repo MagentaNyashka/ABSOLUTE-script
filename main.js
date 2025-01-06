@@ -11,7 +11,8 @@ var roleMinerM = require('role.miner_m');
 var roleAttackerM = require('role.attacker_m');
 var roleHealerM = require('role.healer_m');
 var roleTransfer = require('role.transfer');
-var roleZavodskoy = require('role.zavodskoy');
+var roleZavodskoy = require('role.zavodskoy'); 
+var roleMaintainer = require('role.maintainer');
 const { lastIndexOf } = require('lodash');
 const profiler = require('screeps-profiler');
 const utf15 = require('utf15');
@@ -38,6 +39,14 @@ function base62Encode(input) {
     return encoded || "0";
 }
 
+
+function dark_mode(){
+    if(darkMode){
+        new RoomVisual().rect(-1, -1, 51, 51, {fill: base_color});
+    }
+}
+
+const darkMode = true;
 
 const STRUCTURE_TYPES = [
     STRUCTURE_SPAWN,
@@ -77,10 +86,20 @@ const CLINK = "controllerLinks";
 const SCONT = "sourceContainers";
 const DCONT = "destinationContainers";
 const CCONT = "controllerContainers";
+const MCONT = "mineralContainers";
+const SLAB = "sourceLab";
+const DLAB = "destinationLab";
 
 var price_old = -100;
 var price_old_x = -100;
 var price_old_e = -100;
+
+
+//Visuals
+const base_color = '#000000';
+const text_color = '#00FFFF';
+const energy_color = '#dec15a';
+const stroke_color = '#000000';
 
 if(!Memory.cache){
     Memory.cache = {};
@@ -108,6 +127,8 @@ Builders = new Map();
 Transfers = new Map();
 Centers = new Map();
 HarvesterUpgr = new Map();
+Miners = new Map();
+Maintainers = new Map();
 
 function hashCode(str) {
     let hash = 0;
@@ -186,6 +207,8 @@ function CACHE_CREEPS(room_spawn) {
     const transfers = byRole['transfer'] || [];
     const centers = byRole['center'] || [];
     const harvester_upgr = byRole['harvester_upgr'] || [];
+    const miners = byRole['miner'] || [];
+    const maintainers = byRole['maintainer'] || [];
 
     const reserve_harvesters = harvesters.filter(creep => 
         creep.body.length > 2 &&
@@ -201,9 +224,11 @@ function CACHE_CREEPS(room_spawn) {
     Transfers.set(room_spawn.room.name, transfers);
     Centers.set(room_spawn.room.name, centers);
     HarvesterUpgr.set(room_spawn.room.name, harvester_upgr);
+    Miners.set(room_spawn.room.name, miners);
+    Maintainers.set(room_spawn.room.name, maintainers);
 }
 function TowerCACHE(room_spawn){
-    var hostiles = room_spawn.room.find(FIND_HOSTILE_CREEPS);
+    var hostiles = room_spawn.room.find(FIND_HOSTILE_CREEPS).filter(c => c.owner.username != 'Blattlaus');
     Enemies.set(room_spawn.room.name, hostiles);
 
     var damagedStructures = room_spawn.room.find(FIND_STRUCTURES, {
@@ -211,7 +236,8 @@ function TowerCACHE(room_spawn){
                 return (
                     structure.structureType != STRUCTURE_WALL &&
                     structure.structureType != STRUCTURE_RAMPART &&
-                    structure.hits < 1000);
+                    structure.structureType != STRUCTURE_ROAD &&
+                    structure.hits < structure.hitsMax * 0.8);
                 }
             });
     var damagedWalls = room_spawn.room.find(FIND_STRUCTURES, {
@@ -221,52 +247,103 @@ function TowerCACHE(room_spawn){
                 }
             });
     DamagedStructures.set(room_spawn.room.name, damagedStructures);
-    DamagedWalls.set(room_spawn.room.name, damagedStructures);
+    DamagedWalls.set(room_spawn.room.name, damagedWalls);
 }
 
-function render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHarvestersUpgr, maxTransferers, maxCenters){
+function getColorByPercentage(percentage) {
+    const p = Math.min(1, Math.max(0, percentage));
+
+    const start = { r: 139, g: 0, b: 0 };
+    const end = { r: 0, g: 255, b: 0 };
+
+    const r = Math.round((1 - p) * start.r + p * end.r);
+    const g = Math.round((1 - p) * start.g + p * end.g);
+    const b = Math.round((1 - p) * start.b + p * end.b);
+
+    const toHex = value => value.toString(16).padStart(2, "0");
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+
+function render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHarvestersUpgr, maxTransferers, maxCenters, maxMiners){
     const roomName = room_spawn.room.name;
-    new RoomVisual(roomName)
-            .text('Sources ' + global.getSources(roomName).length, 36, 3.2, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-            .text('Extentions ' + global.getCachedStructures(roomName, STRUCTURE_EXTENSION).length, 36, 3.8, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-            .text('Harvesters ' + Harvesters.get(room_spawn.room.name).length + '(' + ReserveHarvesters.get(room_spawn.room.name).length + ')' + '/' + maxHarvesters + '+' + HarvesterUpgr.get(room_spawn.room.name).length + "/" + maxHarvestersUpgr, 36, 4.4, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-            .text('Upgraders ' + Upgraders.get(room_spawn.room.name).length + '/' + maxUpgraders, 36, 5, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-            .text('Centers ' + Centers.get(room_spawn.room.name).length + '/' + maxCenters, 36, 5.6, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-            .text('Builders ' + Builders.get(room_spawn.room.name).length + '/' + maxBuilders, 36, 6.2, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-            .text('Transferers ' + Transfers.get(room_spawn.room.name).length + '/' + maxTransferers, 36, 6.8, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
+    new RoomVisual(roomName).rect(35.7, 3.5, 6, 5.4, {fill: base_color, opacity: 0.5, stroke: stroke_color, strokeWidth: 0.1})
+            .text('Sources ' + global.getSources(roomName).length, 36, 4.2, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+            .text('Extentions ' + global.getCachedStructures(roomName, STRUCTURE_EXTENSION).length, 36, 4.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+            .text('Harvesters ' + Harvesters.get(room_spawn.room.name).length + '(' + ReserveHarvesters.get(room_spawn.room.name).length + ')' + '/' + maxHarvesters + '+' + HarvesterUpgr.get(room_spawn.room.name).length + "/" + maxHarvestersUpgr, 36, 5.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+            .text('Upgraders ' + Upgraders.get(room_spawn.room.name).length + '/' + maxUpgraders, 36, 6, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+            .text('Centers ' + Centers.get(room_spawn.room.name).length + '/' + maxCenters, 36, 6.6, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+            .text('Builders ' + Builders.get(room_spawn.room.name).length + '/' + maxBuilders, 36, 7.2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+            .text('Transferers ' + Transfers.get(room_spawn.room.name).length + '/' + maxTransferers, 36, 7.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+            .text('Miners ' + Miners.get(room_spawn.room.name).length + '/' + maxMiners, 36, 8.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
             ;
     const sources = global.getSources(room_spawn.room.name);
     for(let i = 0; i < sources.length; i++){
-        new RoomVisual(room_spawn.room.name).text(sources[i].energy + "/" + sources[i].energyCapacity, sources[i].pos.x+0.6, sources[i].pos.y+0.15, {align: 'left', color:'#dec15a', stroke: '#000000', strokeWidth: 0.1, font: 0.5})
-        .text(sources[i].ticksToRegeneration || 300, sources[i].pos.x-0.6, sources[i].pos.y+0.15, {align: 'right', color:'#dec15a', stroke: '#000000', strokeWidth: 0.1, font: 0.5})
+        new RoomVisual(room_spawn.room.name).text(sources[i].energy + "/" + sources[i].energyCapacity, sources[i].pos.x+0.6, sources[i].pos.y+0.15, {align: 'left', color: energy_color, stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
+        .text(sources[i].ticksToRegeneration || 300, sources[i].pos.x-0.6, sources[i].pos.y+0.15, {align: 'right', color: energy_color, stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
         ;
     }
     const percentage = room_spawn.room.controller.progress/room_spawn.room.controller.progressTotal*100;
-    new RoomVisual(roomName).text(room_spawn.room.controller.progress + "/" + room_spawn.room.controller.progressTotal, room_spawn.room.controller.pos.x+0.7, room_spawn.room.controller.pos.y+0.15, {align: 'left', color:'#ffffff', stroke: '#000000', strokeWidth: 0.1, font: 0.5})
-    .text(percentage.toFixed(2) + "%", room_spawn.room.controller.pos.x+0.7, room_spawn.room.controller.pos.y+0.75, {align: 'left', color:'#ffffff', stroke: '#000000', strokeWidth: 0.1, font: 0.5})
+    new RoomVisual(roomName).text(room_spawn.room.controller.progress + "/" + room_spawn.room.controller.progressTotal, room_spawn.room.controller.pos.x+0.7, room_spawn.room.controller.pos.y+0.15, {align: 'left', color:'#ffffff', stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
+    .text(percentage.toFixed(2) + "%", room_spawn.room.controller.pos.x+0.7, room_spawn.room.controller.pos.y+0.75, {align: 'left', color:'#ffffff', stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
     ;
-    new RoomVisual(roomName).text('Energy ' + room_spawn.room.energyAvailable + "/" + room_spawn.room.energyCapacityAvailable, room_spawn.pos, {align: 'center', color: '#dec15a',stroke: '#000000', strokeWidth:0.05, font: 0.5});
+    new RoomVisual(roomName).text('Energy ' + room_spawn.room.energyAvailable + "/" + room_spawn.room.energyCapacityAvailable, room_spawn.pos, {align: 'center', color: energy_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5});
+    const controller = room_spawn.room.controller;
+    const energyDelta = deltaEnergy(roomName);
+    new RoomVisual(roomName).rect(42.3, 3.5, 6.4, 5.4, {fill: base_color, opacity: 0.5, stroke: stroke_color, strokeWidth: 0.1})
+    .text(controller.progress + '/' + controller.progressTotal + '(' + percentage.toFixed(2) + ')', 42.6, 4.2, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    .text(energyDelta.delta, 42.6, 4.8, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    .text(energyDelta.totalRoomEnergy, 45.6, 4.8, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
 
+    const sLabs = global.getSourceLabs(roomName);
+    const dLabs = global.getDestLabs(roomName);
+    _.forEach(sLabs, function(sLab){
+        new RoomVisual(roomName).text("S", sLab.pos.x-0.01, sLab.pos.y+0.17, {align: 'center', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.7});
+    })
+    _.forEach(dLabs, function(dLab){
+        new RoomVisual(roomName).text("D", dLab.pos.x-0.01, dLab.pos.y+0.17, {align: 'center', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.7});
+    })
+
+    const damagedStructures = global.getCachedStructures(roomName, STRUCTURE_ROAD);
+    _.forEach(damagedStructures, function(road){
+        const percentage = road.hits/road.hitsMax;
+        new RoomVisual(roomName).circle(road.pos, {fill: getColorByPercentage(percentage)})
+        .text(percentage, road.pos, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.2});
+    })
+
+    const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER);
+    _.forEach(containers, function(container){
+        new RoomVisual(roomName)
+        .text((container.store.getUsedCapacity()/container.store.getCapacity() * 100).toFixed(2) + "%", container.pos.x+0.7, container.pos.y+0.75, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    });
+
+    const constructionSites = global.getConstructionSites(roomName);
+    _.forEach(constructionSites, function(constr_site){
+        new RoomVisual(roomName)
+        .text((constr_site.progress/constr_site.progressTotal*100).toFixed(2) + "%", constr_site.pos.x-0.01, constr_site.pos.y+0.17, {align: 'center', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    });
     console.log(`${roomName} ${getControllerProgressBar(room_spawn.room.controller)} \t${room_spawn.room.energyAvailable}/${room_spawn.room.energyCapacityAvailable}`);
 }
 function render(){
     const roomCount = Object.values(Game.rooms).filter(room => room.controller && room.controller.my).length;
     const limit = Game.cpu.limit;
     const avgCpu = trackAverageCPU();
-    new RoomVisual()
-    .text('Time ' + Game.time, 36, 0.2, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-    .text('Cpu ' + Game.cpu.getUsed().toFixed(2), 36, 0.8, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-    .text('Cpu/Room ' + (Game.cpu.getUsed()/roomCount).toFixed(2), 41.4, 0.8, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-    .text('Cpu.Avg ' + avgCpu + "(" + (avgCpu/limit*100).toFixed(2) + "%)", 36, 1.4, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-    .text('Cpu.Avg/Room ' + (avgCpu/roomCount).toFixed(2) + "(" + (avgCpu/limit*100).toFixed(2) + "%)", 41.4, 1.4, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-    .text('Cpu.Limit ' + limit, 36, 2, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
-    .text('Bucket ' + Game.cpu.bucket + '/10000(' + (10000 - Game.cpu.bucket) + ')', 36, 2.6, {align: 'left', color: '#808080',stroke: '#000000', strokeWidth:0.05, font: 0.5})
+    new RoomVisual().rect(35.7, -0.5, 13, 3.5, {fill: base_color, opacity: 0.5, stroke: stroke_color, strokeWidth: 0.1})
+    .text('Time ' + Game.time, 36, 0.2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    .text('Cpu ' + Game.cpu.getUsed().toFixed(2), 36, 0.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    .text('Cpu/Room ' + (Game.cpu.getUsed()/roomCount).toFixed(2), 41.4, 0.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    .text(Game.shard.name, 41.4, 0.2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    .text('Cpu.Avg ' + avgCpu + "(" + (avgCpu/limit*100).toFixed(2) + "%)", 36, 1.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    .text('Cpu.Avg/Room ' + (avgCpu/roomCount).toFixed(2) + "(" + (avgCpu/limit*100).toFixed(2) + "%)", 41.4, 1.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    .text('Cpu.Limit ' + limit, 36, 2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    .text('Bucket ' + Game.cpu.bucket + '/10000(' + (10000 - Game.cpu.bucket) + ')', 36, 2.6, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
     ;
 }
 
+
 function roomPlanCacher(roomName){
     if (Game.time % 500 === 0) {
-        Game.notify(`roomPlanCacher inprogress for room ${Game.shard.name}:[${roomName}]`);
+        // Game.notify(`roomPlanCacher inprogress for room ${Game.shard.name}:[${roomName}]`);
         if(!Memory.cache){
             Memory.cache = {};
         }
@@ -297,7 +374,6 @@ function roomPlanCacher(roomName){
 
 global.getCachedStructures = function (roomName, structureType) {
     if (!Memory.cache || !Memory.cache.roomPlan || !Memory.cache.roomPlan[roomName]) {
-        // console.log(`No cached data available for room: ${roomName}`);
         return [];
     }
     if (!global.cache) {
@@ -307,7 +383,6 @@ global.getCachedStructures = function (roomName, structureType) {
         global.cache[roomName] = {};
     }
     if (!global.cache[roomName][structureType]) {
-        // console.log(`structure caching in progress for [${roomName}][${structureType}]...`);
         const encodedData = Memory.cache.roomPlan[roomName][structureType];
         if (!encodedData || encodedData === "0") {
             return [];
@@ -333,7 +408,6 @@ global.getCachedStructures = function (roomName, structureType) {
                 structures.push(structure.structure);
             }
         }
-
         global.cache[roomName][structureType] = structures;
     }
 
@@ -425,16 +499,21 @@ function roomContainerCacher(roomName){
         }
         const sources = global.getSources(roomName);
         const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER);
+        const minerals = global.getCachedStructures(roomName, STRUCTURE_EXTRACTOR);
         let source_conts = [];
         let dest_conts = [];
         let controller_conts = [];
+        let mineral_const = [];
 
         source_conts = containers.filter(container => {return sources.some(source => container.pos.inRangeTo(source.pos, 3));});
         controller_conts = containers.filter(container => {return container.pos.inRangeTo(Game.rooms[roomName].controller, 3);});
-        dest_conts = containers.filter(container => {return !sources.some(source => container.pos.inRangeTo(source.pos, 3)) && !container.pos.inRangeTo(Game.rooms[roomName].controller, 3);});
+        dest_conts = containers.filter(container => {return !sources.some(source => container.pos.inRangeTo(source.pos, 3)) && !container.pos.inRangeTo(Game.rooms[roomName].controller, 3) && !minerals.some(mineral => container.pos.inRangeTo(mineral.pos, 3));});
+        mineral_const = containers.filter(container => {return minerals.some(mineral => container.pos.inRangeTo(mineral.pos, 3));});
+
         let SCPositions = [];
         let DCPositions = [];
         let CCPositions = [];
+        let MCPositions = [];
         _.forEach(source_conts, function (sCont) {
             const valuesX = sCont.pos.x;
             const valuesY = sCont.pos.y;
@@ -453,12 +532,160 @@ function roomContainerCacher(roomName){
             CCPositions.push(valuesX);
             CCPositions.push(valuesY);
         });
+        _.forEach(mineral_const, function (mCont) {
+            const valuesX = mCont.pos.x;
+            const valuesY = mCont.pos.y;
+            MCPositions.push(valuesX);
+            MCPositions.push(valuesY);
+        });
 
         Memory.cache.roomPlan[roomName][SCONT] = map_codec.encode(SCPositions);
         Memory.cache.roomPlan[roomName][DCONT] = map_codec.encode(DCPositions);
         Memory.cache.roomPlan[roomName][CCONT] = map_codec.encode(CCPositions);
+        Memory.cache.roomPlan[roomName][MCONT] = map_codec.encode(MCPositions);
     }
 }
+
+function labsCacher(roomName){
+    if(Game.time % 500 === 0){
+        if (!this.roomPlan) {
+            this.roomPlan = {};
+        }
+        if (!this.roomPlan[roomName]) {
+            this.roomPlan[roomName] = {};
+        }
+        const labs = global.getCachedStructures(roomName, STRUCTURE_LAB);
+        let source_labs = [];
+        let destination_labs = [];
+
+        _.forEach(labs, function(lab){
+            const lab1 = lab.room.lookForAt(LOOK_STRUCTURES, lab.pos.x+1, lab.pos.y+1).filter(s => s.structureType === STRUCTURE_LAB);
+            const lab2 = lab.room.lookForAt(LOOK_STRUCTURES, lab.pos.x-1, lab.pos.y+1).filter(s => s.structureType === STRUCTURE_LAB);
+            const lab3 = lab.room.lookForAt(LOOK_STRUCTURES, lab.pos.x-1, lab.pos.y-1).filter(s => s.structureType === STRUCTURE_LAB);
+            const lab4 = lab.room.lookForAt(LOOK_STRUCTURES, lab.pos.x+1, lab.pos.y-1).filter(s => s.structureType === STRUCTURE_LAB);
+            if((lab1.length > 0 && lab3.length > 0) || (lab2.length > 0 && lab4.length > 0)){
+                source_labs.push(lab);
+            }
+        });
+        destination_labs = labs.filter(s => !source_labs.includes(s));
+        let sPositions = [];
+        let dPositions = [];
+
+        _.forEach(source_labs, function (sLab) {
+            const valuesX = sLab.pos.x;
+            const valuesY = sLab.pos.y;
+            sPositions.push(valuesX);
+            sPositions.push(valuesY);
+        });
+        _.forEach(destination_labs, function (dLab) {
+            const valuesX = dLab.pos.x;
+            const valuesY = dLab.pos.y;
+            dPositions.push(valuesX);
+            dPositions.push(valuesY);
+        });
+
+        Memory.cache.roomPlan[roomName][SLAB] = map_codec.encode(sPositions);
+        Memory.cache.roomPlan[roomName][DLAB] = map_codec.encode(dPositions);
+    }
+}
+
+global.getSourceLabs = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName][SLAB]){
+        if(!Memory.cache){
+            return;
+        }
+        if(!Memory.cache.roomPlan){
+            return;
+        }
+        if(!Memory.cache.roomPlan[roomName]){
+            return;
+        }
+        const encodedData = Memory.cache.roomPlan[roomName][SLAB];
+        if (!encodedData || encodedData === "0") {
+            return [];
+        }
+
+        const coordinates = map_codec.decode(encodedData);
+
+        let coordinatePairs = [];
+        for (let i = 0; i < coordinates.length; i += 2) {
+            if (coordinates[i + 1] !== undefined) {
+                coordinatePairs.push({ x: coordinates[i], y: coordinates[i + 1] });
+            }
+        }
+
+        let structures = [];
+        for (let i = 0; i < coordinatePairs.length; i++) {
+            const lookAtResult = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y);
+
+            const structure = lookAtResult.find(
+                (s) => s.type === LOOK_STRUCTURES && s.structure.structureType === STRUCTURE_LAB
+            );
+            if (structure) {
+                structures.push(structure.structure);
+            }
+        }
+
+        global.cache[roomName][SLAB] = structures;
+    }
+
+    return global.cache[roomName][SLAB];
+};
+
+global.getDestLabs = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName][DLAB]){
+        if(!Memory.cache){
+            return;
+        }
+        if(!Memory.cache.roomPlan){
+            return;
+        }
+        if(!Memory.cache.roomPlan[roomName]){
+            return;
+        }
+        const encodedData = Memory.cache.roomPlan[roomName][DLAB];
+        if (!encodedData || encodedData === "0") {
+            return [];
+        }
+
+        const coordinates = map_codec.decode(encodedData);
+
+        let coordinatePairs = [];
+        for (let i = 0; i < coordinates.length; i += 2) {
+            if (coordinates[i + 1] !== undefined) {
+                coordinatePairs.push({ x: coordinates[i], y: coordinates[i + 1] });
+            }
+        }
+
+        let structures = [];
+        for (let i = 0; i < coordinatePairs.length; i++) {
+            const lookAtResult = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y);
+
+            const structure = lookAtResult.find(
+                (s) => s.type === LOOK_STRUCTURES && s.structure.structureType === STRUCTURE_LAB
+            );
+            if (structure) {
+                structures.push(structure.structure);
+            }
+        }
+
+        global.cache[roomName][DLAB] = structures;
+    }
+
+    return global.cache[roomName][DLAB];
+};
 
 global.getControllerContainers = function(roomName){
     if(!global.cache){
@@ -467,7 +694,7 @@ global.getControllerContainers = function(roomName){
     if(!global.cache[roomName]){
         global.cache[roomName] = {};
     }
-    if(!global.cache[roomName].cContainers){
+    if(!global.cache[roomName][CCONT]){
         if(!Memory.cache){
             return;
         }
@@ -516,7 +743,7 @@ global.getSourceContainers = function(roomName){
     if(!global.cache[roomName]){
         global.cache[roomName] = {};
     }
-    if(!global.cache[roomName].cContainers){
+    if(!global.cache[roomName][SCONT]){
         if(!Memory.cache){
             return;
         }
@@ -558,6 +785,55 @@ global.getSourceContainers = function(roomName){
     return global.cache[roomName][SCONT];
 };
 
+global.getMineralContainers = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName][MCONT]){
+        if(!Memory.cache){
+            return;
+        }
+        if(!Memory.cache.roomPlan){
+            return;
+        }
+        if(!Memory.cache.roomPlan[roomName]){
+            return;
+        }
+        const encodedData = Memory.cache.roomPlan[roomName][MCONT];
+        if (!encodedData || encodedData === "0") {
+            return [];
+        }
+
+        const coordinates = map_codec.decode(encodedData);
+
+        let coordinatePairs = [];
+        for (let i = 0; i < coordinates.length; i += 2) {
+            if (coordinates[i + 1] !== undefined) {
+                coordinatePairs.push({ x: coordinates[i], y: coordinates[i + 1] });
+            }
+        }
+
+        let structures = [];
+        for (let i = 0; i < coordinatePairs.length; i++) {
+            const lookAtResult = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y);
+
+            const structure = lookAtResult.find(
+                (s) => s.type === LOOK_STRUCTURES && s.structure.structureType === STRUCTURE_CONTAINER
+            );
+            if (structure) {
+                structures.push(structure.structure);
+            }
+        }
+
+        global.cache[roomName][MCONT] = structures;
+    }
+
+    return global.cache[roomName][MCONT];
+};
+
 global.getDestContainers = function(roomName){
     if(!global.cache){
         global.cache = {};
@@ -565,7 +841,7 @@ global.getDestContainers = function(roomName){
     if(!global.cache[roomName]){
         global.cache[roomName] = {};
     }
-    if(!global.cache[roomName].cContainers){
+    if(!global.cache[roomName][DCONT]){
         if(!Memory.cache){
             return;
         }
@@ -614,7 +890,7 @@ global.getDestLinks = function(roomName){
     if(!global.cache[roomName]){
         global.cache[roomName] = {};
     }
-    if(!global.cache[roomName].dLinks){
+    if(!global.cache[roomName][DLINK]){
         if(!Memory.cache){
             return;
         }
@@ -663,7 +939,7 @@ global.getSourceLinks = function(roomName){
     if(!global.cache[roomName]){
         global.cache[roomName] = {};
     }
-    if(!global.cache[roomName].sLinks){
+    if(!global.cache[roomName][SLINK]){
         if(!Memory.cache){
             return;
         }
@@ -712,7 +988,7 @@ global.getControllerLinks = function(roomName){
     if(!global.cache[roomName]){
         global.cache[roomName] = {};
     }
-    if(!global.cache[roomName].cLinks){
+    if(!global.cache[roomName][CLINK]){
         if(!Memory.cache){
             return;
         }
@@ -753,6 +1029,22 @@ global.getControllerLinks = function(roomName){
 
     return global.cache[roomName][CLINK];
 };
+
+global.getMinerals = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName].minerals){
+        const minerals = Game.rooms[roomName].find(FIND_MINERALS);
+        if(minerals){
+            global.cache[roomName].minerals = minerals;
+        }
+    }
+    return global.cache[roomName].minerals;
+}
 
 // global.getSourceContainers = function(roomName){
 //     if(!global.cache){
@@ -860,6 +1152,7 @@ function getRoomNameFromCoordinates(x, y) {
     const yDir = y < 0 ? 'S' : 'N';
     return `${xDir}${Math.abs(x)}${yDir}${Math.abs(y)}`;
 }
+
 function adjustCenterBP(roomName){
     if(!Memory.cache){
         return;
@@ -878,7 +1171,7 @@ function adjustCenterBP(roomName){
     let pathLength = sourcePath.length;
     if(sourcePath.length != 0){
         const sources = global.getSources(roomName);
-        if(sources.length == 2){
+        if(sources.length > 2){
             pathLength *= 2;
         }
         while(!isAvailable){
@@ -895,7 +1188,7 @@ function adjustCenterBP(roomName){
             for(let i = 0; i < CARRY_count; i++){
                 BP.push(CARRY);
             }
-            console.log(roomName,BP);
+            // console.log(roomName,BP);
             let cost = BP.length * 50;
             if(cost > room.energyCapacityAvailable || BP.length > 50){
                 maxCenters++;
@@ -921,7 +1214,7 @@ function adjustUpgraderBP(roomName){
     let BP = [CARRY,MOVE];
     const sources = global.getSources(roomName);
     let energyPerTick = 7.5;
-    let work_Count;
+    // let work_Count;
     if(sources.length == 2){
         energyPerTick = 15;
     }
@@ -929,13 +1222,16 @@ function adjustUpgraderBP(roomName){
         BP = [CARRY,MOVE];
         for(let i = 0; i < energyPerTick; i++){
             BP.push(WORK);
-            work_Count++;
+            // work_Count++;
         }
-        work_Count = work_Count / 2;
+        // for(let i = 0; i < energyPerTick; i++){
+        //     BP.push(MOVE);
+        // }
         // console.log(work_Count);
-        for(let j = 0; j < work_Count; j++){
-            BP.push(MOVE);
-        }
+        // for(let j = 0; j < work_Count; j++){
+        //     BP.push(MOVE);
+        // }
+        // console.log(roomName,BP);
         let cost = 0;
         _.forEach(BP, function(part){
             switch(part){
@@ -959,6 +1255,44 @@ function adjustUpgraderBP(roomName){
     return {
         maxUpgraders: maxUpgraders,
         UpgraderBP: BP
+    };
+}
+
+function adjustMinerBP(roomName){
+    let maxMiners = 0;
+    let BP = [MOVE];
+    const mineral = global.getMinerals(roomName)
+    if(mineral[0].mineralAmount > 0 && global.getMineralContainers(roomName)[0].store.getFreeCapacity() > 100){
+        maxMiners = 1;
+        let maxBP = 49;
+        let isAvailable = false;
+        const minerals = global.getCachedStructures(roomName, STRUCTURE_EXTRACTOR);
+        while(!isAvailable){
+            BP = [MOVE];
+            for(let i = 0; i < maxBP; i++){
+                BP.push(WORK);
+            }
+            let cost = 0;
+            _.forEach(BP, function(part){
+                switch(part){
+                    case MOVE:
+                        cost += 50;
+                        break;
+                    case WORK:
+                        cost += 100;
+                        break;
+            }});
+            if(BP.length > 50 || cost > Game.rooms[roomName].energyCapacityAvailable){
+                maxBP--;
+            }
+            else{
+                isAvailable = true;
+            }
+        }
+    }
+    return {
+        maxMiners: maxMiners,
+        MinerBP: BP
     };
 }
 
@@ -997,7 +1331,17 @@ function getRoomPriorityByControllerCompletion() {
 
     return roomCompletion.map(room => room.roomName);
 }
+function getRoomPriorityBySourceCount(){
+    const rooms = Object.values(Game.rooms).filter(room => room.controller && room.controller.my);
+    const roomSources = rooms.map(room => {
+        const sources = global.getSources(room.name);
+        return { roomName: room.name, sourceCount: sources.length };
+    });
 
+    roomSources.sort((a, b) => a.sourceCount - b.sourceCount);
+
+    return roomSources.map(room => room.roomName);
+}
 
 function readCreepRolesFromIntershardMemory(shard) {
     const intershardData = InterShardMemory.getRemote(shard);
@@ -1106,7 +1450,6 @@ global.getFreeSources = function(roomName, sourceId) {
 
 function calculateSourcePathLength(roomName, room_spawn) {
     if (Game.time % 500 === 0) {
-        console.log("calculating");
         if (!Memory.cache) {
             return;
         }
@@ -1123,12 +1466,20 @@ function calculateSourcePathLength(roomName, room_spawn) {
             Memory.cache.sourcePath[roomName].cost = 0;
         }
         const sLinks = global.getSourceLinks(roomName);
+        const dLinks = global.getDestLinks(roomName);
+        const cLinks = global.getControllerLinks(roomName);
         const sources = global.getSources(roomName);
-        if (sLinks.length === sources.length) {
+        // const links = global.getCachedStructures(roomName, STRUCTURE_LINK);
+        if(sLinks && sLinks.length === sources.length && dLinks && dLinks.length > 0 && cLinks && cLinks.length > 0){
             Memory.cache.sourcePath[roomName].length = 0;
             Memory.cache.sourcePath[roomName].cost = 0;
             return;
         }
+        // if (sLinks.length === sources.length) {
+        //     Memory.cache.sourcePath[roomName].length = 0;
+        //     Memory.cache.sourcePath[roomName].cost = 0;
+        //     return;
+        // }
         if (sources.length > 1) {
             const path = PathFinder.search(sources[0].pos, { pos: sources[1].pos, range: 1 }, { ignoreCreeps: true });
             Memory.cache.sourcePath[roomName].length = path.path.length;
@@ -1164,8 +1515,42 @@ function calculateSourcePathLength(roomName, room_spawn) {
     }
 }
 
+function deltaEnergy(roomName) {
+    if (!Memory.energyStats) {
+        Memory.energyStats = {};
+    }
+    const room = Game.rooms[roomName];
+    let energy = room.energyAvailable;
+    const storage = room.storage;
+    const terminal = room.terminal;
+    if (storage) {
+        energy += storage.store[RESOURCE_ENERGY] || 0;
+    }
+    if (terminal) {
+        energy += terminal.store[RESOURCE_ENERGY] || 0;
+    }
+    if(!Memory.energyStats[roomName]){
+        Memory.energyStats[roomName] = { lastValue: energy, totalDelta: 0 };
+    }
+    const towers = global.getCachedStructures(roomName, STRUCTURE_TOWER);
+    _.forEach(towers, function(tower){
+        energy += tower.store[RESOURCE_ENERGY];
+    });
+    
+    const delta = Memory.energyStats[roomName].lastValue - energy;
+    Memory.energyStats[roomName].totalDelta -= delta;
+    Memory.energyStats[roomName].lastValue = energy;
+
+    return {
+        delta: Memory.energyStats[roomName].totalDelta,
+        totalRoomEnergy: energy
+    };
+}
+
 profiler.enable();
 module.exports.loop = function() {
+    dark_mode();
+    // console.log(getRoomPriorityBySourceCount());
     // if(Game.shard.name === 'shard2'){console.log(Math.min(global.getFreeSources('E1N29', global.getSources('E1N29')[0].id).length,2));}   
     // console.log(findClosestHighwayRoom('E1N24'));
     //clearConsole();
@@ -1185,8 +1570,11 @@ module.exports.loop = function() {
         roomPlanCacher(roomName);
         roomLinksCacher(roomName);
         roomContainerCacher(roomName);
+        labsCacher(roomName);
         TowerCACHE(room_spawn);
         calculateSourcePathLength(roomName,room_spawn);
+
+
 
         //towers
         try{
@@ -1269,6 +1657,10 @@ module.exports.loop = function() {
         let Builder_M_BP = [WORK,CARRY,MOVE];
         let maxHarvestersUpgr = 0;
         let HarvesterUpgr_BP = [WORK,CARRY,MOVE];
+        let maxMiners = 0;
+        let Miner_BP = [WORK,CARRY,MOVE];
+        let maxMaintenancers = 0;
+        let Maintenancer_BP = [WORK,CARRY,MOVE,MOVE];
 
         const Extensions = global.getCachedStructures(roomName, STRUCTURE_EXTENSION);
         const roomLevel = getBaseLevel(Extensions.length);
@@ -1440,10 +1832,18 @@ module.exports.loop = function() {
         const UpgraderInfo = adjustUpgraderBP(roomName);
         maxUpgraders = UpgraderInfo.maxUpgraders;
         Ugrader_BP = UpgraderInfo.UpgraderBP;
+        if(global.getMineralContainers(roomName).length > 0){
+            const MinerInfo = adjustMinerBP(roomName);
+            maxMiners = MinerInfo.maxMiners;
+            Miner_BP = MinerInfo.MinerBP;
+        }
+        if(global.getCachedStructures(roomName, STRUCTURE_ROAD).filter(s => s.hits < 1500).length > 0){
+            maxMaintenancers = 1;
+        }
 
 
         try{
-            render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHarvestersUpgr, maxTransferers, maxCenters);
+            render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHarvestersUpgr, maxTransferers, maxCenters, maxMiners);
         }catch(e){
             // console.log("визуалки опять наебнулись");
             // console.log(e);
@@ -1472,6 +1872,8 @@ module.exports.loop = function() {
             var transfers = Transfers.get(room_spawn.room.name);
             var centers = Centers.get(room_spawn.room.name);
             var harvester_upgr = HarvesterUpgr.get(room_spawn.room.name);
+            var miners = Miners.get(room_spawn.room.name);
+            var maintainers = Maintainers.get(room_spawn.room.name);
 
             if((harvesters.length - reserve_harvesters.length) < maxHarvesters && testIfCanSpawn == 0){
                 var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
@@ -1492,6 +1894,16 @@ module.exports.loop = function() {
                 var newTransferName = 'T_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 status = room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
                     {memory: {role: 'transfer'}});
+            }
+            if(miners.length < maxMiners && harvesters.length == maxHarvesters && global.getCachedStructures(roomName, STRUCTURE_EXTRACTOR).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+                var newMinerName = 'M_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                status = room_spawn.spawnCreep(Miner_BP, newMinerName,
+                    {memory: {role: 'miner'}});
+            }
+            if(maintainers.length < maxMaintenancers && harvesters.length == maxHarvesters && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+                var newMaintainerName = 'R_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                status = room_spawn.spawnCreep(Maintenancer_BP, newMaintainerName,
+                    {memory: {role: 'maintainer'}});
             }
             if(centers.length < maxCenters && /*global.getCachedStructures(roomName, STRUCTURE_LINK).concat(getCachedStructures(roomName, STRUCTURE_CONTAINER)).length >= 1 &&*/ testIfCanSpawnC == 0 && testIfCanSpawn == 0){
                 var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
@@ -1532,88 +1944,105 @@ module.exports.loop = function() {
                 status = room_spawn.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY], newName,
                     {memory: {role: 'remote_claimer'}});
             }
+
             // console.log(roomName, status);
        });
 
 
     //terminals
     if(Game.time % 10 == 1){
-        const priorityRooms = getRoomPriorityByControllerCompletion();
-        if(Game.rooms[roomName].terminal != undefined){
-            const terminal = Game.rooms[roomName].terminal;
-            // if(Game.resources[PIXEL] >= 0) {
-                // var orders = Game.market.getAllOrders(order => order.resourceType == PIXEL &&
-                                                    //   order.type == ORDER_BUY);
-                                                    //   orders.sort(function(a,b){return b.price - a.price;});
-                // if(orders.length != 0){
-                        // if(orders[0].amount > Game.resources[PIXEL]){
-                            // var result = Game.market.deal(orders[0].id, Game.resources[PIXEL]);
-                        // }
-                        // else{
-                            // var result = Game.market.deal(orders[0].id, orders[0].amount);
-                        // }
-                // }
-            // }
+        // const priorityRooms = getRoomPriorityBySourceCount();
+        // if(Game.rooms[roomName].terminal != undefined){
+        //     const terminal = Game.rooms[roomName].terminal;
+        //     // if(Game.resources[PIXEL] >= 0) {
+        //         // var orders = Game.market.getAllOrders(order => order.resourceType == PIXEL &&
+        //                                             //   order.type == ORDER_BUY);
+        //                                             //   orders.sort(function(a,b){return b.price - a.price;});
+        //         // if(orders.length != 0){
+        //                 // if(orders[0].amount > Game.resources[PIXEL]){
+        //                     // var result = Game.market.deal(orders[0].id, Game.resources[PIXEL]);
+        //                 // }
+        //                 // else{
+        //                     // var result = Game.market.deal(orders[0].id, orders[0].amount);
+        //                 // }
+        //         // }
+        //     // }
             
-            if(global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN).length > 0){
-                    if(terminal.store[RESOURCE_POWER] <= 1000) {
-                        var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_POWER &&
-                                                              order.type == ORDER_SELL &&
-                                                              Game.market.calcTransactionCost(terminal.store[RESOURCE_POWER], terminal.room.name, order.roomName) < 200000
-                                                            );
-                                                            orders.sort(function(a,b){return a.price - b.price;});
-                        if(orders.length != 0){
-                                    var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
-                        }
-                    }
-            }
+        //     if(global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN).length > 0){
+        //             if(terminal.store[RESOURCE_POWER] <= 1000) {
+        //                 var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_POWER &&
+        //                                                       order.type == ORDER_SELL &&
+        //                                                       Game.market.calcTransactionCost(terminal.store[RESOURCE_POWER], terminal.room.name, order.roomName) < 200000
+        //                                                     );
+        //                                                     orders.sort(function(a,b){return a.price - b.price;});
+        //                 if(orders.length != 0){
+        //                             var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
+        //                 }
+        //             }
+        //     }
             
-            // if(terminal.store[RESOURCE_ENERGY] >= 10000 && Game.rooms[roomName].controller.level == 8){
-            //     let targetRoom = priorityRooms[0];
-            //     for(let i = 0; i < priorityRooms.length; i++){
-            //         if(roomName != priorityRooms[i] && Game.rooms[priorityRooms[i]].terminal != undefined && Game.rooms[priorityRooms[i]].controller.level <= 7){
-            //             targetRoom = priorityRooms[i];
-            //             break;
-            //         }
-            //     }
-            //     if(Game.rooms[targetRoom].terminal.store.getFreeCapacity(RESOURCE_ENERGY) > terminal.store[RESOURCE_ENERGY]){
-            //         terminal.send(RESOURCE_ENERGY, (terminal.store[RESOURCE_ENERGY]*0.75), targetRoom);
-            //     }
-            //     else{
-            //         terminal.send(RESOURCE_ENERGY, Game.rooms[targetRoom].terminal.store.getFreeCapacity(RESOURCE_ENERGY), targetRoom);
-            //     }
-            // }else{
-                if(terminal.store[RESOURCE_ENERGY] >= 200000){ {
-                    var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_ENERGY &&
-                        order.type == ORDER_BUY &&
-                        Game.market.calcTransactionCost(terminal.store[RESOURCE_ENERGY], terminal.room.name, order.roomName) < 200000
-                        );
-                        orders.sort(function(a,b){return b.price - a.price;});
-                        if(orders.length != 0){
-                        var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
-                        }
-                    }
-                }
+        //     if(terminal.store[RESOURCE_ENERGY] >= 50000 && global.getSources(roomName).length > 1){
+        //         let targetRoom = {};
+        //         for(let i = 0; i < priorityRooms.length; i++){
+        //             targetRoom = {};
+        //             if(roomName != priorityRooms[i] && Game.rooms[priorityRooms[i]].terminal != undefined && Game.rooms[priorityRooms[i]].terminal.store[RESOURCE_ENERGY] < 100000){
+        //                 targetRoom = priorityRooms[i];
+        //                 break;
+        //             }
+        //         }
+        //         if(targetRoom != {}){
+        //             if(Game.rooms[targetRoom].terminal.store.getFreeCapacity(RESOURCE_ENERGY) > terminal.store[RESOURCE_ENERGY]){
+        //                 terminal.send(RESOURCE_ENERGY, (terminal.store[RESOURCE_ENERGY]*0.75), targetRoom);
+        //             }
+        //             else{
+        //                 terminal.send(RESOURCE_ENERGY, Game.rooms[targetRoom].terminal.store.getFreeCapacity(RESOURCE_ENERGY), targetRoom);
+        //             }
+        //         }
+        //         else{
+        //             if(terminal.store[RESOURCE_ENERGY] >= 50000){
+        //                 var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_ENERGY &&
+        //                     order.type == ORDER_BUY &&
+        //                     Game.market.calcTransactionCost(terminal.store[RESOURCE_ENERGY], terminal.room.name, order.roomName) < 200000
+        //                     );
+        //                     orders.sort(function(a,b){return b.price - a.price;});
+        //                     if(orders.length != 0){
+        //                     var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     // else{
+        //         if(terminal.store[RESOURCE_ENERGY] >= 200000){ {
+        //             var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_ENERGY &&
+        //                 order.type == ORDER_BUY &&
+        //                 Game.market.calcTransactionCost(terminal.store[RESOURCE_ENERGY], terminal.room.name, order.roomName) < 200000
+        //                 );
+        //                 orders.sort(function(a,b){return b.price - a.price;});
+        //                 if(orders.length != 0){
+        //                 var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
+        //                 }
+        //             }
+        //         }
             
-                if(terminal.room.find(FIND_MY_STRUCTURES, {
-                    filter: (structure) => {
-                        return(structure.structureType == STRUCTURE_NUKER) &&
-                        structure.isActive() && structure.store[RESOURCE_GHODIUM] < 5000;
-                    }}).length > 0){
-                        if(terminal.store[RESOURCE_GHODIUM] <= 1000) {
-                            var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_GHODIUM &&
-                                                                  order.type == ORDER_SELL &&
-                                                                  Game.market.calcTransactionCost(terminal.store[RESOURCE_GHODIUM], terminal.room.name, order.roomName) < 200000
-                                                                );
-                            if(orders.length != 0){
-                                        var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
-                            }
-                        }
-                    }
-            }
-        // }
-    }  
-
+        //         if(terminal.room.find(FIND_MY_STRUCTURES, {
+        //             filter: (structure) => {
+        //                 return(structure.structureType == STRUCTURE_NUKER) &&
+        //                 structure.isActive() && structure.store[RESOURCE_GHODIUM] < 5000;
+        //             }}).length > 0){
+        //                 if(terminal.store[RESOURCE_GHODIUM] <= 1000) {
+        //                     var orders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_GHODIUM &&
+        //                                                           order.type == ORDER_SELL &&
+        //                                                           Game.market.calcTransactionCost(terminal.store[RESOURCE_GHODIUM], terminal.room.name, order.roomName) < 200000
+        //                                                         );
+        //                     if(orders.length != 0){
+        //                                 var result = Game.market.deal(orders[0].id, orders[0].amount, terminal.room.name);
+        //                     }
+        //                 }
+        //             }
+        //     }
+        // // }
+    
+        }
     });
     // console.log(InterShardMemory.getLocal());
     if(Game.shard.name === 'shard3'){
@@ -1670,6 +2099,9 @@ module.exports.loop = function() {
         }
         if(creep.memory.role == 'remote_claimer') {
             roleRemoteClaimer.run(creep);
+        }
+        if(creep.memory.role == 'maintainer') {
+            roleMaintainer.run(creep);
         }
     }
 render();
