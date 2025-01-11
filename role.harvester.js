@@ -4,13 +4,16 @@ var roleHarvester = {
 
         const energyStructures = global.getCachedStructures(roomName, STRUCTURE_LINK).concat(global.getCachedStructures(roomName, STRUCTURE_CONTAINER));
 
-        const sources = global.getSources(roomName);
+        const sources = global.getSources(roomName)[0];
+        if(!sources){
+            console.log(roomName);
+        }
 
         if (creep.memory.transferring && creep.store[RESOURCE_ENERGY] === 0) {
             creep.memory.transferring = false;
             delete creep.memory.target;
         }
-        if (!creep.memory.transferring && (creep.store.getFreeCapacity() <= 10 || sources[0].energy === 0)) {
+        if (!creep.memory.transferring && (creep.store.getFreeCapacity() <= 10 || sources.energy === 0)) {
             creep.memory.transferring = true;
             delete creep.memory.target;
         }
@@ -55,9 +58,9 @@ var roleHarvester = {
                 delete creep.memory.target;
             }    
         }else {
-            new RoomVisual(roomName).circle(sources[0].pos, {fill: '#ffff00', opacity: 0.5, radius: 0.55});
-            if (creep.harvest(sources[0]) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(sources[0], { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10});
+            new RoomVisual(roomName).circle(sources.pos, {fill: '#ffff00', opacity: 0.5, radius: 0.55});
+            if (creep.harvest(sources) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(sources, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10});
             }
         }
     },

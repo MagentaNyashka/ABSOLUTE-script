@@ -1,7 +1,6 @@
 var roleMaintainer = {
     run: function(creep) {
         const roomName = creep.room.name;
-        const roads = global.getCachedStructures(roomName, STRUCTURE_ROAD).filter(s => s.hits < s.hitsMax);
             if(creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
                 creep.memory.working = false;
                 delete creep.memory.target;
@@ -13,8 +12,9 @@ var roleMaintainer = {
 
             if(creep.memory.working) {
                 if(!creep.memory.target) {
+                    const roads = global.getCachedStructures(roomName, STRUCTURE_ROAD).concat(global.getCachedStructures(roomName, STRUCTURE_CONTAINER)).filter(s => s.hits < s.hitsMax);
                     if(roads.length > 0) {
-                        creep.memory.target = roads.sort((a, b) => a.hits - b.hits)[0].id;
+                        creep.memory.target = roads.sort((a, b) => (a.hits/a.hitsMax) - (b.hits/b.hitsMax))[0].id;
                     }
                 }
                 const target = Game.getObjectById(creep.memory.target);
@@ -43,11 +43,11 @@ var roleMaintainer = {
                         }else{
                             const containers = global.getDestContainers(roomName).concat(global.getDestLinks(roomName)).filter(s => s.store[RESOURCE_ENERGY] > 0);
                             if(containers.length > 0) {
-                                creep.memory.target = containers[0].id;
+                                creep.memory.target = creep.pos.findClosestByRange(containers).id;
                             }else{
                                 const source_containers = global.getSourceContainers(roomName).filter(s => s.store[RESOURCE_ENERGY] > 0);
                                 if(source_containers.length > 0) {
-                                    creep.memory.target = source_containers[0].id;
+                                    creep.memory.target = creep.pos.findClosestByRange(source_containers).id;
                                 }
                             }
                         }

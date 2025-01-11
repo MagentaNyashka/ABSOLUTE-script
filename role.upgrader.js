@@ -85,14 +85,14 @@ var roleUpgrader = {
             creep.memory.transferring = false;
             delete creep.memory.target;
         }
-        if (!creep.memory.transferring && creep.store[RESOURCE_ENERGY] > 0) {
+        // if (!creep.memory.transferring && creep.store[RESOURCE_ENERGY] > 0) {
+        if (!creep.memory.transferring && creep.store.getFreeCapacity(RESOURCE_ENERGY) === 0) {
+
             creep.memory.transferring = true;
             delete creep.memory.target;
             creep.memory.target = creep.room.controller.id;
         }
-        if (creep.memory.transferring
-            //  && creep.room.controller.ticksToDowngrade <= 199990
-            ) {
+        if (creep.memory.transferring) {
             const status = creep.upgradeController(creep.room.controller);
             new RoomVisual(roomName).circle(creep.room.controller.pos, {fill: 'transparent',stroke: '#00ff00', strokeWidth: 0.03, opacity: 1, radius: 0.55});
             if (status === ERR_NOT_IN_RANGE) {
@@ -118,11 +118,11 @@ var roleUpgrader = {
                 //         }
                 //     }
                 // }
-                if(energyStructures.length != 0){
-                    creep.memory.target = creep.pos.findClosestByPath(energyStructures).id;
+                if(energyStructures.length > 0){
+                    creep.memory.target = creep.pos.findClosestByRange(energyStructures).id;
                 }else{
                         const sources = global.getSources(roomName);
-                        const target = creep.pos.findClosestByPath(sources);
+                        const target = creep.pos.findClosestByRange(sources);
                         if(target){
                             creep.memory.target = target.id;
                         }
@@ -132,13 +132,16 @@ var roleUpgrader = {
             if (targetStructure) {
                 new RoomVisual(roomName).circle(targetStructure.pos, {fill: 'transparent',stroke: '#ff0000', strokeWidth: 0.03, opacity: 1, radius: 0.55});
                 let status;
-                status = creep.withdraw(targetStructure, RESOURCE_ENERGY);
-                if(status === OK){delete creep.memory.target;return;}
-                if(status === ERR_INVALID_TARGET){
+                if(targetStructure instanceof Structure){
+                    status = creep.withdraw(targetStructure, RESOURCE_ENERGY);
+                }else{
                     status = creep.harvest(targetStructure);
-                    delete creep.memory.target;
-                    return;
                 }
+                if(status === OK){delete creep.memory.target;return;}
+                // if(status === ERR_INVALID_TARGET){
+                //     delete creep.memory.target;
+                //     return;
+                // }
                 if(status === ERR_NOT_IN_RANGE){
                     creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#00ffff'}});
                     return;

@@ -21,6 +21,23 @@ const roleRemoteMiner = require('role.remoteMiner');
 const roleClaimRoom = require('./role.claimRoom');
 const roleRemoteClaimer = require('./role.claimRoom');
 
+
+
+
+
+//NOTES FOR FUTURE
+/*
+Make request system for terminals
+Move creeps info(max per role and BPs) to global
+Optimize Memory usage
+
+
+
+
+
+
+*/
+
 const map_codec = new utf15.Codec({ depth: 6, array: 1 });
 function base62Encode(input) {
     const base62Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -47,6 +64,8 @@ function dark_mode(){
 }
 
 const darkMode = true;
+const globalRender = true;
+const roomRender = true;
 
 const STRUCTURE_TYPES = [
     STRUCTURE_SPAWN,
@@ -228,7 +247,8 @@ function CACHE_CREEPS(room_spawn) {
     Maintainers.set(room_spawn.room.name, maintainers);
 }
 function TowerCACHE(room_spawn){
-    var hostiles = room_spawn.room.find(FIND_HOSTILE_CREEPS).filter(c => c.owner.username != 'Blattlaus');
+    var hostiles = room_spawn.room.find(FIND_HOSTILE_CREEPS);
+    // .filter(c => c.owner.username != 'Blattlaus');
     Enemies.set(room_spawn.room.name, hostiles);
 
     var damagedStructures = room_spawn.room.find(FIND_STRUCTURES, {
@@ -266,78 +286,119 @@ function getColorByPercentage(percentage) {
 
 
 function render_room(room_spawn, maxHarvesters, maxUpgraders, maxBuilders, maxHarvestersUpgr, maxTransferers, maxCenters, maxMiners){
-    const roomName = room_spawn.room.name;
-    new RoomVisual(roomName).rect(35.7, 3.5, 6, 5.4, {fill: base_color, opacity: 0.5, stroke: stroke_color, strokeWidth: 0.1})
-            .text('Sources ' + global.getSources(roomName).length, 36, 4.2, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-            .text('Extentions ' + global.getCachedStructures(roomName, STRUCTURE_EXTENSION).length, 36, 4.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-            .text('Harvesters ' + Harvesters.get(room_spawn.room.name).length + '(' + ReserveHarvesters.get(room_spawn.room.name).length + ')' + '/' + maxHarvesters + '+' + HarvesterUpgr.get(room_spawn.room.name).length + "/" + maxHarvestersUpgr, 36, 5.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-            .text('Upgraders ' + Upgraders.get(room_spawn.room.name).length + '/' + maxUpgraders, 36, 6, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-            .text('Centers ' + Centers.get(room_spawn.room.name).length + '/' + maxCenters, 36, 6.6, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-            .text('Builders ' + Builders.get(room_spawn.room.name).length + '/' + maxBuilders, 36, 7.2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-            .text('Transferers ' + Transfers.get(room_spawn.room.name).length + '/' + maxTransferers, 36, 7.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-            .text('Miners ' + Miners.get(room_spawn.room.name).length + '/' + maxMiners, 36, 8.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+    if(roomRender){
+        const roomName = room_spawn.room.name;
+
+        const harvesters = Harvesters.get(roomName) || [];
+        const reserve_harvesters = ReserveHarvesters.get(roomName) || [];
+        const upgraders = Upgraders.get(roomName) || [];
+        const builders = Builders.get(roomName) || [];
+        const transfers = Transfers.get(roomName) || [];
+        const centers = Centers.get(roomName) || [];
+        const harvester_upgr = HarvesterUpgr.get(roomName) || [];
+        const miners = Miners.get(roomName) || [];
+        const maintainers = Maintainers.get(roomName) || [];
+
+        new RoomVisual(roomName).rect(35.7, 3.5, 6, 5.4, {fill: base_color, opacity: 0.5, stroke: stroke_color, strokeWidth: 0.1})
+                .text('Sources ' + global.getSources(roomName).length, 36, 4.2, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+                .text('Extentions ' + global.getCachedStructures(roomName, STRUCTURE_EXTENSION).length, 36, 4.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+                .text('Harvesters ' + harvesters.length + '(' + reserve_harvesters.length + ')' + '/' + maxHarvesters + '+' + harvester_upgr.length + "/" + maxHarvestersUpgr, 36, 5.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+                .text('Upgraders ' + upgraders.length + '/' + maxUpgraders, 36, 6, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+                .text('Centers ' + centers.length + '/' + maxCenters, 36, 6.6, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+                .text('Builders ' + builders.length + '/' + maxBuilders, 36, 7.2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+                .text('Transferers ' + transfers.length + '/' + maxTransferers, 36, 7.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+                .text('Miners ' + miners.length + '/' + maxMiners, 36, 8.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+                ;
+        const sources = global.getSources(room_spawn.room.name);
+        for(let i = 0; i < sources.length; i++){
+            new RoomVisual(room_spawn.room.name).text(sources[i].energy + "/" + sources[i].energyCapacity, sources[i].pos.x+0.6, sources[i].pos.y+0.15, {align: 'left', color: energy_color, stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
+            .text(sources[i].ticksToRegeneration || 300, sources[i].pos.x-0.6, sources[i].pos.y+0.15, {align: 'right', color: energy_color, stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
             ;
-    const sources = global.getSources(room_spawn.room.name);
-    for(let i = 0; i < sources.length; i++){
-        new RoomVisual(room_spawn.room.name).text(sources[i].energy + "/" + sources[i].energyCapacity, sources[i].pos.x+0.6, sources[i].pos.y+0.15, {align: 'left', color: energy_color, stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
-        .text(sources[i].ticksToRegeneration || 300, sources[i].pos.x-0.6, sources[i].pos.y+0.15, {align: 'right', color: energy_color, stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
+        }
+        const percentage = room_spawn.room.controller.progress/room_spawn.room.controller.progressTotal*100;
+        new RoomVisual(roomName)
+        // .text(getControllerProgressBar(Game.rooms[roomName].controller), room_spawn.room.controller.pos.x+0.7, room_spawn.room.controller.pos.y+0.15, {align: 'left', color: '#ffffff', stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text(room_spawn.room.controller.progress + "/" + room_spawn.room.controller.progressTotal, room_spawn.room.controller.pos.x+0.7, room_spawn.room.controller.pos.y+0.15, {align: 'left', color:'#ffffff', stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
+        .text(percentage.toFixed(2) + "%", room_spawn.room.controller.pos.x+0.7, room_spawn.room.controller.pos.y+0.75, {align: 'left', color:'#ffffff', stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
         ;
+        new RoomVisual(roomName).text('Energy ' + room_spawn.room.energyAvailable + "/" + room_spawn.room.energyCapacityAvailable, room_spawn.pos, {align: 'center', color: energy_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5});
+        const controller = room_spawn.room.controller;
+        const energyDelta = deltaEnergy(roomName);
+        const terminal = Game.rooms[roomName].terminal;
+        const storage = Game.rooms[roomName].storage;
+        let storageInfo = [];
+        storageInfo[0] = 0;
+        storageInfo[1] = 0;
+
+        if(terminal){
+            storageInfo[0] = terminal.store[RESOURCE_ENERGY] || 0;
+        }
+        if(storage){
+            storageInfo[1] = storage.store[RESOURCE_ENERGY] || 0;
+        }
+        new RoomVisual(roomName).rect(42.3, 3.5, 6.4, 5.4, {fill: base_color, opacity: 0.5, stroke: stroke_color, strokeWidth: 0.1})
+        .text(controller.progress + '/' + controller.progressTotal + '(' + percentage.toFixed(2) + ')', 42.6, 4.2, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text(energyDelta.delta, 42.6, 4.8, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text(energyDelta.totalRoomEnergy, 45.6, 4.8, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text(storageInfo[0], 42.6, 5.4, {align: 'left', color: energy_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text(storageInfo[1], 45.6, 5.4, {align: 'left', color: energy_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+
+        
+
+        // const sLabs = global.getSourceLabs(roomName);
+        // const dLabs = global.getDestLabs(roomName);
+        // _.forEach(sLabs, function(sLab){
+            // new RoomVisual(roomName).text("S", sLab.pos.x-0.01, sLab.pos.y+0.17, {align: 'center', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.7});
+        // })
+        // _.forEach(dLabs, function(dLab){
+            // new RoomVisual(roomName).text("D", dLab.pos.x-0.01, dLab.pos.y+0.17, {align: 'center', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.7});
+        // })
+
+        const damagedStructures = global.getCachedStructures(roomName, STRUCTURE_ROAD);
+        _.forEach(damagedStructures, function(road){
+            const percentage = road.hits/road.hitsMax;
+            new RoomVisual(roomName).circle(road.pos, {fill: getColorByPercentage(percentage)})
+            .text(percentage, road.pos, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.2});
+        })
+
+        const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER);
+        _.forEach(containers, function(container){
+            new RoomVisual(roomName)
+            .text((container.store.getUsedCapacity()/container.store.getCapacity() * 100).toFixed(2) + "%", container.pos.x+0.7, container.pos.y+0.75, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        });
+
+        // const constructionSites = global.getConstructionSites(roomName);
+        // _.forEach(constructionSites, function(constr_site){
+            // new RoomVisual(roomName)
+            // .text((constr_site.progress/constr_site.progressTotal*100).toFixed(2) + "%", constr_site.pos.x-0.01, constr_site.pos.y+0.17, {align: 'center', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        // });
+        console.log(`${roomName} ${getControllerProgressBar(room_spawn.room.controller)} \t${room_spawn.room.energyAvailable}/${room_spawn.room.energyCapacityAvailable}`);
     }
-    const percentage = room_spawn.room.controller.progress/room_spawn.room.controller.progressTotal*100;
-    new RoomVisual(roomName).text(room_spawn.room.controller.progress + "/" + room_spawn.room.controller.progressTotal, room_spawn.room.controller.pos.x+0.7, room_spawn.room.controller.pos.y+0.15, {align: 'left', color:'#ffffff', stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
-    .text(percentage.toFixed(2) + "%", room_spawn.room.controller.pos.x+0.7, room_spawn.room.controller.pos.y+0.75, {align: 'left', color:'#ffffff', stroke: stroke_color, strokeWidth: 0.1, font: 0.5})
-    ;
-    new RoomVisual(roomName).text('Energy ' + room_spawn.room.energyAvailable + "/" + room_spawn.room.energyCapacityAvailable, room_spawn.pos, {align: 'center', color: energy_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5});
-    const controller = room_spawn.room.controller;
-    const energyDelta = deltaEnergy(roomName);
-    new RoomVisual(roomName).rect(42.3, 3.5, 6.4, 5.4, {fill: base_color, opacity: 0.5, stroke: stroke_color, strokeWidth: 0.1})
-    .text(controller.progress + '/' + controller.progressTotal + '(' + percentage.toFixed(2) + ')', 42.6, 4.2, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    .text(energyDelta.delta, 42.6, 4.8, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    .text(energyDelta.totalRoomEnergy, 45.6, 4.8, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-
-    const sLabs = global.getSourceLabs(roomName);
-    const dLabs = global.getDestLabs(roomName);
-    _.forEach(sLabs, function(sLab){
-        new RoomVisual(roomName).text("S", sLab.pos.x-0.01, sLab.pos.y+0.17, {align: 'center', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.7});
-    })
-    _.forEach(dLabs, function(dLab){
-        new RoomVisual(roomName).text("D", dLab.pos.x-0.01, dLab.pos.y+0.17, {align: 'center', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.7});
-    })
-
-    const damagedStructures = global.getCachedStructures(roomName, STRUCTURE_ROAD);
-    _.forEach(damagedStructures, function(road){
-        const percentage = road.hits/road.hitsMax;
-        new RoomVisual(roomName).circle(road.pos, {fill: getColorByPercentage(percentage)})
-        .text(percentage, road.pos, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.2});
-    })
-
-    const containers = global.getCachedStructures(roomName, STRUCTURE_CONTAINER);
-    _.forEach(containers, function(container){
-        new RoomVisual(roomName)
-        .text((container.store.getUsedCapacity()/container.store.getCapacity() * 100).toFixed(2) + "%", container.pos.x+0.7, container.pos.y+0.75, {align: 'left', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    });
-
-    const constructionSites = global.getConstructionSites(roomName);
-    _.forEach(constructionSites, function(constr_site){
-        new RoomVisual(roomName)
-        .text((constr_site.progress/constr_site.progressTotal*100).toFixed(2) + "%", constr_site.pos.x-0.01, constr_site.pos.y+0.17, {align: 'center', color: text_color, stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    });
-    console.log(`${roomName} ${getControllerProgressBar(room_spawn.room.controller)} \t${room_spawn.room.energyAvailable}/${room_spawn.room.energyCapacityAvailable}`);
 }
 function render(){
-    const roomCount = Object.values(Game.rooms).filter(room => room.controller && room.controller.my).length;
-    const limit = Game.cpu.limit;
-    const avgCpu = trackAverageCPU();
-    new RoomVisual().rect(35.7, -0.5, 13, 3.5, {fill: base_color, opacity: 0.5, stroke: stroke_color, strokeWidth: 0.1})
-    .text('Time ' + Game.time, 36, 0.2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    .text('Cpu ' + Game.cpu.getUsed().toFixed(2), 36, 0.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    .text('Cpu/Room ' + (Game.cpu.getUsed()/roomCount).toFixed(2), 41.4, 0.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    .text(Game.shard.name, 41.4, 0.2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    .text('Cpu.Avg ' + avgCpu + "(" + (avgCpu/limit*100).toFixed(2) + "%)", 36, 1.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    .text('Cpu.Avg/Room ' + (avgCpu/roomCount).toFixed(2) + "(" + (avgCpu/limit*100).toFixed(2) + "%)", 41.4, 1.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    .text('Cpu.Limit ' + limit, 36, 2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    .text('Bucket ' + Game.cpu.bucket + '/10000(' + (10000 - Game.cpu.bucket) + ')', 36, 2.6, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
-    ;
+    if(globalRender){
+        const roomCount = Object.values(Game.rooms).filter(room => room.controller && room.controller.my).length;
+        const limit = Game.cpu.limit;
+        const avgCpu = trackAverageCPU();
+        new RoomVisual().rect(35.7, -0.5, 13, 3.5, {fill: base_color, opacity: 0.5, stroke: stroke_color, strokeWidth: 0.1})
+        .text('Time ' + Game.time, 36, 0.2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text('Cpu ' + Game.cpu.getUsed().toFixed(2), 36, 0.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text('Cpu/Room ' + (Game.cpu.getUsed()/roomCount).toFixed(2), 41.4, 0.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text(Game.shard.name, 41.4, 0.2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text('Cpu.Avg ' + avgCpu + "(" + (avgCpu/limit*100).toFixed(2) + "%)", 36, 1.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text('Cpu.Avg/Room ' + (avgCpu/roomCount).toFixed(2) + "(" + (avgCpu/limit*100).toFixed(2) + "%)", 41.4, 1.4, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text('Cpu.Limit ' + limit, 36, 2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        .text('Bucket ' + Game.cpu.bucket + '/10000(' + (10000 - Game.cpu.bucket) + ')', 36, 2.6, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
+        ;
+        let stringify = {
+            cpuUsage: parseFloat(avgCpu),
+            bucket: Game.cpu.bucket,
+            creeps: Object.keys(Game.creeps).length,
+            gcl: Game.gcl.progress,
+            gclTotal: Game.gcl.progressTotal
+        }
+        RawMemory.segments[1] = JSON.stringify(stringify);
+    }
 }
 
 
@@ -598,13 +659,13 @@ global.getSourceLabs = function(roomName){
     }
     if(!global.cache[roomName][SLAB]){
         if(!Memory.cache){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan[roomName]){
-            return;
+            return [];
         }
         const encodedData = Memory.cache.roomPlan[roomName][SLAB];
         if (!encodedData || encodedData === "0") {
@@ -745,13 +806,13 @@ global.getSourceContainers = function(roomName){
     }
     if(!global.cache[roomName][SCONT]){
         if(!Memory.cache){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan[roomName]){
-            return;
+            return [];
         }
         const encodedData = Memory.cache.roomPlan[roomName][SCONT];
         if (!encodedData || encodedData === "0") {
@@ -794,13 +855,13 @@ global.getMineralContainers = function(roomName){
     }
     if(!global.cache[roomName][MCONT]){
         if(!Memory.cache){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan[roomName]){
-            return;
+            return [];
         }
         const encodedData = Memory.cache.roomPlan[roomName][MCONT];
         if (!encodedData || encodedData === "0") {
@@ -843,15 +904,15 @@ global.getDestContainers = function(roomName){
     }
     if(!global.cache[roomName][DCONT]){
         if(!Memory.cache){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan[roomName]){
-            return;
+            return [];
         }
-        const encodedData = Memory.cache.roomPlan[roomName][DCONT];
+        const encodedData = Memory.cache.roomPlan[roomName][DLINK];
         if (!encodedData || encodedData === "0") {
             return [];
         }
@@ -892,13 +953,13 @@ global.getDestLinks = function(roomName){
     }
     if(!global.cache[roomName][DLINK]){
         if(!Memory.cache){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan[roomName]){
-            return;
+            return [];
         }
         const encodedData = Memory.cache.roomPlan[roomName][DLINK];
         if (!encodedData || encodedData === "0") {
@@ -990,13 +1051,13 @@ global.getControllerLinks = function(roomName){
     }
     if(!global.cache[roomName][CLINK]){
         if(!Memory.cache){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan){
-            return;
+            return [];
         }
         if(!Memory.cache.roomPlan[roomName]){
-            return;
+            return [];
         }
         const encodedData = Memory.cache.roomPlan[roomName][CLINK];
         if (!encodedData || encodedData === "0") {
@@ -1155,52 +1216,64 @@ function getRoomNameFromCoordinates(x, y) {
 
 function adjustCenterBP(roomName){
     if(!Memory.cache){
-        return;
+        return {
+            maxCenters: 0,
+            CenterBP: []
+        };
     }
     if(!Memory.cache.sourcePath){
-        return;
+        return {
+            maxCenters: 0,
+            CenterBP: []
+        };
     }
     if(!Memory.cache.sourcePath[roomName]){
-        return;
+        return {
+            maxCenters: 0,
+            CenterBP: []
+        };
     }
     const room = Game.rooms[roomName];
-    let maxCenters = 1;
+    let maxCenters = 0;
     let isAvailable = false;
     let sourcePath = Memory.cache.sourcePath[roomName];
     let BP = [];
-    let pathLength = sourcePath.length;
-    if(sourcePath.length != 0){
-        const sources = global.getSources(roomName);
-        if(sources.length > 2){
-            pathLength *= 2;
-        }
-        while(!isAvailable){
-            const CARRY_count = Math.ceil(pathLength / 2.5 / maxCenters);
-            let MOVE_count = Math.ceil(CARRY_count / 2);
-            if(sourcePath.length !== sourcePath.cost){
-                MOVE_count = CARRY_count;
-            }
-            
-            BP = [];
-            for(let i = 0; i < MOVE_count; i++){
-                BP.push(MOVE);
-            }
-            for(let i = 0; i < CARRY_count; i++){
-                BP.push(CARRY);
-            }
-            // console.log(roomName,BP);
-            let cost = BP.length * 50;
-            if(cost > room.energyCapacityAvailable || BP.length > 50){
-                maxCenters++;
-            }
-            else{
-                isAvailable = true;
-            }
-        }
-    }
-    else{
+    if(global.getCachedStructures(roomName, STRUCTURE_CONTAINER).length > 0 || global.getCachedStructures(roomName, STRUCTURE_LINK).length > 0){
         maxCenters = 1;
-        BP = [MOVE, CARRY, CARRY];
+        let pathLength = sourcePath.length;
+        if(sourcePath.length != 0){
+            const sources = global.getSources(roomName);
+            if(sources.length > 2){
+                pathLength *= 2;
+            }
+            while(!isAvailable){
+                const CARRY_count = Math.ceil(pathLength / 2.5 / maxCenters);
+                let MOVE_count = Math.ceil(CARRY_count / 2);
+                if(sourcePath.length !== sourcePath.cost){
+                    MOVE_count = CARRY_count;
+                }
+
+                BP = [];
+                for(let i = 0; i < MOVE_count; i++){
+                    BP.push(MOVE);
+                }
+                for(let i = 0; i < CARRY_count; i++){
+                    BP.push(CARRY);
+                }
+                // console.log(roomName,BP);
+                let cost = BP.length * 50;
+                if(cost > room.energyCapacityAvailable || BP.length > 50){
+                    maxCenters++;
+                }
+                else{
+                    isAvailable = true;
+                }
+            }
+        }
+        else{
+            maxCenters = 1;
+            BP = [MOVE, CARRY, CARRY];
+        }
     }
     return {
         maxCenters: maxCenters,
@@ -1220,7 +1293,7 @@ function adjustUpgraderBP(roomName){
     }
     while(!isAvailable){
         BP = [CARRY,MOVE];
-        for(let i = 0; i < energyPerTick; i++){
+        for(let i = 0; i < Math.ceil(energyPerTick)/maxUpgraders; i++){
             BP.push(WORK);
             // work_Count++;
         }
@@ -1264,13 +1337,16 @@ function adjustMinerBP(roomName){
     const mineral = global.getMinerals(roomName)
     if(mineral[0].mineralAmount > 0 && global.getMineralContainers(roomName)[0].store.getFreeCapacity() > 100){
         maxMiners = 1;
-        let maxBP = 49;
+        let maxBP = 20;
         let isAvailable = false;
         const minerals = global.getCachedStructures(roomName, STRUCTURE_EXTRACTOR);
         while(!isAvailable){
             BP = [MOVE];
             for(let i = 0; i < maxBP; i++){
                 BP.push(WORK);
+                if(i % 2 == 0){
+                    BP.push(MOVE);
+                }
             }
             let cost = 0;
             _.forEach(BP, function(part){
@@ -1296,6 +1372,109 @@ function adjustMinerBP(roomName){
     };
 }
 
+function adjustTransferBP(roomName){
+    if(!Memory.cache){
+        return {
+            maxTransferers: 0,
+            TrasnfererBP: []
+        };
+    }
+    if(!Memory.cache.mineralPath){
+        return {
+            maxTransferers: 0,
+            TrasnfererBP: []
+        };
+    }
+    if(!Memory.cache.mineralPath[roomName]){
+        return {
+            maxTransferers: 0,
+            TrasnfererBP: []
+        };
+    }
+    const room = Game.rooms[roomName];
+    let maxTransferers = 1;
+    let isAvailable = false;
+    let mineralPath = Memory.cache.mineralPath[roomName];
+    let BP = [];
+    let pathLength = mineralPath.length;
+    if(mineralPath.length != 0 || global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN).length > 0 || global.getCachedStructures(roomName, STRUCTURE_NUKER)){
+        const sources = global.getSources(roomName);
+        if(sources.length > 2){
+            pathLength *= 2;
+        }
+        while(!isAvailable){
+            const CARRY_count = Math.ceil(pathLength / 2.5 / maxTransferers);
+            const MOVE_count = Math.ceil(CARRY_count / 2);
+            
+            BP = [];
+            for(let i = 0; i < MOVE_count; i++){
+                BP.push(MOVE);
+            }
+            for(let i = 0; i < CARRY_count; i++){
+                BP.push(CARRY);
+            }
+            let cost = BP.length * 50;
+            if(cost > room.energyCapacityAvailable || BP.length > 50){
+                maxTransferers++;
+            }
+            else{
+                isAvailable = true;
+            }
+        }
+    }
+    else{
+        maxTransferers = 0;
+        BP = [MOVE, CARRY, CARRY];
+    }
+    return {
+        maxTransferers: maxTransferers,
+        TrasnfererBP: BP
+    };
+}
+
+function adjustHarvesterBP(roomName, sourceIndex=0){
+    if(!Memory.cache){
+        return {
+            maxHarvesters: 2,
+            HarvesterBP: [WOKR,CARRY,CARRY,MOVE]
+        };
+    }
+    const room = Game.rooms[roomName];
+    let maxHarvesters = 1;
+    let freeBlocks = global.getFreeSources(roomName, global.getSources(roomName)[sourceIndex].id).length;
+    let isAvailable = false;
+    let BP = [];
+    while(!isAvailable){
+        const WORK_count = 6/maxHarvesters;
+        const CARRY_count = 1;
+        const MOVE_count = 2;
+        let cost = 0;
+        BP = [];
+        for(let i = 0; i < MOVE_count; i++){
+            BP.push(MOVE);
+            cost += 50;
+        }
+        for(let i = 0; i < CARRY_count; i++){
+            BP.push(CARRY);
+            cost += 50;
+        }
+        for(let i = 0; i < WORK_count; i++){
+            BP.push(WORK);
+            cost += 100;
+        }
+        if(cost > room.energyCapacityAvailable || BP.length > 50){
+            maxHarvesters++;
+        }
+        else{
+            isAvailable = true;
+        }
+    }
+    return {
+        maxHarvesters: Math.min(maxHarvesters, freeBlocks),
+        HarvesterBP: BP
+    };
+}
+
 CACHE_SPAWN();
 
 
@@ -1316,6 +1495,7 @@ function adjustMaxUpgradersByEnergy(maxUpgraders, roomName) {
     }
     return maxUpgraders;
 }
+
 
 function getRoomPriorityByControllerCompletion() {
     const rooms = Object.values(Game.rooms).filter(room => room.controller && room.controller.my);
@@ -1368,15 +1548,26 @@ function getBaseLevel(activeExtensions) {
 function findSafeRoute(originRoom, targetRoom) {
     const route = Game.map.findRoute(originRoom, targetRoom, {
         routeCallback(roomName, fromRoomName) {
-            const room = Game.rooms[roomName];
+            const room = Game.rooms[roomName]; // Get room if visible
+
+            // If the room is visible
             if (room) {
                 const controller = room.controller;
-                if (controller && controller.owner && !controller.my) {
+                if (controller) {
                     // Avoid rooms with hostile controllers
-                    return Infinity;
+                    if (
+                        (controller.owner && !controller.my) || // Hostile owned
+                        (controller.reservation && controller.reservation.username !== 'Purpl3_Br1ck') // Hostile reserved
+                    ) {
+                        return Infinity;
+                    }
                 }
+            } else {
+                // If the room is not visible, assume it may be hostile
+                return 5; // Assign a high but finite cost to discourage using unexplored rooms
             }
-            // Default cost for rooms without hostile controllers
+
+            // Default cost for neutral or friendly rooms
             return 1;
         }
     });
@@ -1406,13 +1597,13 @@ global.getFreeSources = function(roomName, sourceId) {
     }
     if (!global.sources[roomName][sourceId].freePositions) {
         if (!Memory.cache) {
-            return;
+            return [];
         }
         if (!Memory.cache.roomPlan) {
-            return;
+            return [];
         }
         if (!Memory.cache.roomPlan[roomName]) {
-            return;
+            return [];
         }
         const sources = global.getSources(roomName);
         const terrain = Game.map.getRoomTerrain(roomName);
@@ -1513,7 +1704,47 @@ function calculateSourcePathLength(roomName, room_spawn) {
         Memory.cache.sourcePath[roomName].cost = maxPathCost;
         return;
     }
-}
+};
+
+function calculateMineralPathLength(roomName) {
+    if (Game.time % 500 === 0) {
+        if (!Memory.cache) {
+            return;
+        }
+        if (!Memory.cache.mineralPath) {
+            Memory.cache.mineralPath = {};
+        }
+        if (!Memory.cache.mineralPath[roomName]) {
+            Memory.cache.mineralPath[roomName] = {};
+        }
+        if (!Memory.cache.mineralPath[roomName].length) {
+            Memory.cache.mineralPath[roomName].length = 0;
+        }
+        const mineral = global.getMinerals(roomName);
+        if(mineral.length === 0){
+            Memory.cache.mineralPath[roomName].length = 0;
+            return;
+        }
+        const mineralContainer = global.getMineralContainers(roomName);
+        const terminal = Game.rooms[roomName].terminal;
+        const storage = Game.rooms[roomName].storage;
+
+        let paths = [];
+        if(mineralContainer.length > 0){
+            if(terminal){
+                paths.push(PathFinder.search(mineralContainer[0].pos, { pos: terminal.pos, range: 1 }, { ignoreCreeps: true }).path.length);
+            }
+            if(storage){
+                paths.push(PathFinder.search(mineralContainer[0].pos, { pos: storage.pos, range: 1 }, { ignoreCreeps: true }).path.length);
+            }
+        }else{
+            paths.push(0);
+        }
+        const maxPathLength = Math.max(...paths);
+        Memory.cache.mineralPath[roomName].length = maxPathLength;
+        return;
+    }
+};
 
 function deltaEnergy(roomName) {
     if (!Memory.energyStats) {
@@ -1545,8 +1776,19 @@ function deltaEnergy(roomName) {
         delta: Memory.energyStats[roomName].totalDelta,
         totalRoomEnergy: energy
     };
-}
+};
 
+function runLabs(roomName){
+    if(Game.time % 20 === 0){
+        const sLabs = global.getSourceLabs(roomName);
+        const dLabs = global.getDestLabs(roomName);
+        if(sLabs.length === 2 && dLabs.length > 0){
+            _.forEach(dLabs, function(dLab){
+                dLab.runReaction(sLabs[0], sLabs[1]);
+            });
+        }
+    }
+};
 profiler.enable();
 module.exports.loop = function() {
     dark_mode();
@@ -1573,6 +1815,8 @@ module.exports.loop = function() {
         labsCacher(roomName);
         TowerCACHE(room_spawn);
         calculateSourcePathLength(roomName,room_spawn);
+        calculateMineralPathLength(roomName);
+        runLabs(roomName);
 
 
 
@@ -1692,7 +1936,7 @@ module.exports.loop = function() {
                 maxBuilders = 3;
                 maxCenters = global.getSourceContainers(roomName).length || 1;
                 CenterBP = [CARRY,MOVE,CARRY,MOVE,CARRY,MOVE];
-                maxTransferers = 3;
+                maxTransferers = 0;
                 Trasnferer_BP = [CARRY,CARRY,MOVE,MOVE];
                 maxClaimers = 0;
                 Claimer_BP = [CLAIM, MOVE];
@@ -1819,9 +2063,13 @@ module.exports.loop = function() {
                 Builder_M_BP = [WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
                 break;
         }
+        const HarvesterInfo = adjustHarvesterBP(roomName, 0);
+        maxHarvesters = HarvesterInfo.maxHarvesters;
+        Harvester_BP = HarvesterInfo.HarvesterBP;
         if(global.getSources(roomName).length > 1){
-            maxHarvestersUpgr = Math.min(global.getFreeSources(roomName, global.getSources(roomName)[1].id).length,maxHarvesters);
-            HarvesterUpgr_BP = Harvester_BP;
+            const HarvesterUpgrInfo = adjustHarvesterBP(roomName, 1);
+            maxHarvestersUpgr = HarvesterUpgrInfo.maxHarvesters;
+            HarvesterUpgr_BP = HarvesterUpgrInfo.BP;
         }
         else{
             maxHarvestersUpgr = 0;
@@ -1836,9 +2084,22 @@ module.exports.loop = function() {
             const MinerInfo = adjustMinerBP(roomName);
             maxMiners = MinerInfo.maxMiners;
             Miner_BP = MinerInfo.MinerBP;
+            const TransferInfo = adjustTransferBP(roomName);
+            maxTransferers = TransferInfo.maxTransferers;
+            Trasnferer_BP = TransferInfo.TrasnfererBP;
         }
-        if(global.getCachedStructures(roomName, STRUCTURE_ROAD).filter(s => s.hits < 1500).length > 0){
+        if(global.getCachedStructures(roomName, STRUCTURE_ROAD).concat(global.getCachedStructures(roomName, STRUCTURE_CONTAINER)).filter(s => s.hits/s.hitsMax < 0.9).length > 0){
             maxMaintenancers = 1;
+        }
+        if(Memory.ClaimingRooms.includes(roomName) && Memory.claimableRooms.length > 0 && findSafeRoute(roomName, Memory.claimableRooms[0]).length < 12){
+            // if(Game.rooms[Memory.claimableRooms[0]].controller && !Game.rooms[Memory.claimableRooms[0]].controller.my){
+                maxClaimers = 1;
+                Claimer_BP = [MOVE,MOVE,MOVE,MOVE,MOVE,CLAIM];
+            // }
+            // if(Game.rooms[Memory.claimableRooms[0]].controller && !Game.rooms[Memory.claimableRooms[0]].controller.level < 2){
+                maxBuildersM = 2;
+                Builder_M_BP = [WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE];
+            // }
         }
 
 
@@ -1875,82 +2136,243 @@ module.exports.loop = function() {
             var miners = Miners.get(room_spawn.room.name);
             var maintainers = Maintainers.get(room_spawn.room.name);
 
-            if((harvesters.length - reserve_harvesters.length) < maxHarvesters && testIfCanSpawn == 0){
-                var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep(Harvester_BP, newHarvesterName,
-                    {memory: {role: 'harvester'}});
-            }
-            if(upgraders.length < maxUpgraders && (harvesters.length >= maxHarvesters && centers.length >= maxCenters) && testIfCanSpawn == 0){
-                var newUpgraderName = 'U_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep(Ugrader_BP, newUpgraderName,
-                    {memory: {role: 'upgrader'}});
-            }
-            if(builders.length < maxBuilders && harvesters.length >= maxHarvesters && global.getConstructionSites(room_spawn.room.name).length > 0 && upgraders.length >= maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
-                var newBuilderName = 'B_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep(Builder_BP, newBuilderName,
-                    {memory: {role: 'builder'}});
-            }
-            if(transfers.length < maxTransferers && harvesters.length == maxHarvesters && global.getCachedStructures(roomName, STRUCTURE_POWER_SPAWN).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
-                var newTransferName = 'T_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
-                    {memory: {role: 'transfer'}});
-            }
-            if(miners.length < maxMiners && harvesters.length == maxHarvesters && global.getCachedStructures(roomName, STRUCTURE_EXTRACTOR).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
-                var newMinerName = 'M_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep(Miner_BP, newMinerName,
-                    {memory: {role: 'miner'}});
-            }
-            if(maintainers.length < maxMaintenancers && harvesters.length == maxHarvesters && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
-                var newMaintainerName = 'R_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep(Maintenancer_BP, newMaintainerName,
-                    {memory: {role: 'maintainer'}});
-            }
-            if(centers.length < maxCenters && /*global.getCachedStructures(roomName, STRUCTURE_LINK).concat(getCachedStructures(roomName, STRUCTURE_CONTAINER)).length >= 1 &&*/ testIfCanSpawnC == 0 && testIfCanSpawn == 0){
+            var claimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'claimer');
+            var remoteClaimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'remote_claimer');
+            var builders_m = _.filter(Game.creeps, (creep) => creep.memory.role === 'builder_m');
+
+
+            if(centers.length < maxCenters && testIfCanSpawnC == 0 && testIfCanSpawn == 0){
                 var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
                 status = room_spawn.spawnCreep(CenterBP, newCenterName,
-                    {memory: {role: 'center'}});
-            }
-            if(harvester_upgr.length < maxHarvestersUpgr && harvesters.length == maxHarvesters && global.getSources(room_spawn.room.name).length >= 2 && testIfCanSpawn == 0 && upgraders.length >= maxUpgraders) {
-                var newHarvesterUpgrName = 'HU_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep(HarvesterUpgr_BP, newHarvesterUpgrName,
-                    {memory: {role: 'harvester_upgr'}});
-            }
-            if(harvesters.length < 1 && centers.length == 0 && testIfCanSpawn != 0){
-                var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep([WORK,CARRY,MOVE], newHarvesterName,
-                    {memory: {role: 'harvester'}});
-            }
-            if(centers.length < 1 && centers.length < maxCenters && (testIfCanSpawn == -6 || testIfCanSpawnC == -6) && reserve_harvesters.length > 0){
+                {memory: {role: 'center'}});
+            }else if(testIfCanSpawnC == -6 && centers.length == 0){
                 var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep([CARRY,MOVE,CARRY,MOVE,CARRY,MOVE], newCenterName,
-                    {memory: {role: 'center'}});
+                status = room_spawn.spawnCreep([CARRY,CARRY,CARRY,MOVE,MOVE], newCenterName,
+                {memory: {role: 'center'}});
+            }
+            if((harvesters.length-reserve_harvesters.length) < maxHarvesters){
+                if(testIfCanSpawn == 0 && centers.length > 0){
+                    var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                    status = room_spawn.spawnCreep(Harvester_BP, newHarvesterName,
+                        {memory: {role: 'harvester'}});
+                }else{
+                // if(testIfCanSpawn == -6 && centers.length == 0){
+                    var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                    status = room_spawn.spawnCreep([WORK,CARRY,MOVE], newHarvesterName,
+                        {memory: {role: 'harvester'}});
+                }
+            }
+            if(harvesters.length-reserve_harvesters.length == maxHarvesters && centers.length >= maxCenters && testIfCanSpawn == 0){
+                if(upgraders.length >= maxUpgraders){
+                    if(harvester_upgr.length < maxHarvestersUpgr && global.getSources(room_spawn.room.name).length >= 2) {
+                        var newHarvesterUpgrName = 'HU_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                        status = room_spawn.spawnCreep(HarvesterUpgr_BP, newHarvesterUpgrName,
+                            {memory: {role: 'harvester_upgr'}});
+                    }
+
+                    if(builders.length < maxBuilders && global.getConstructionSites(room_spawn.room.name).length > 0){
+                        var newBuilderName = 'B_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                        status = room_spawn.spawnCreep(Builder_BP, newBuilderName,
+                            {memory: {role: 'builder'}});
+                    }
+
+                    if(transfers.length < maxTransferers){
+                        var newTransferName = 'T_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                        status = room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
+                            {memory: {role: 'transfer'}});
+                    }
+
+                    if(miners.length < maxMiners &&  global.getCachedStructures(roomName, STRUCTURE_EXTRACTOR).length > 0){
+                        var newMinerName = 'M_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                        status = room_spawn.spawnCreep(Miner_BP, newMinerName,
+                            {memory: {role: 'miner'}});
+                    }
+
+                    if(maintainers.length < maxMaintenancers){
+                        var newMaintainerName = 'R_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                        status = room_spawn.spawnCreep(Maintenancer_BP, newMaintainerName,
+                            {memory: {role: 'maintainer'}});
+                    }
+
+                    if(Memory.ClaimingRooms.includes(roomName)){
+                        if(claimers.length < maxClaimers){
+                            var newClaimerName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                            status = room_spawn.spawnCreep(Claimer_BP, newClaimerName,
+                                {memory: {role: 'claimer'}});
+                        }
+
+                        if(builders_m.length < maxBuildersM){
+                            var newBuilderMName = 'BM_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                            status = room_spawn.spawnCreep(Builder_M_BP, newBuilderMName,
+                                {memory: {role: 'builder_m'}});
+                        }
+
+                        // if(Object.values(Memory.ClaimingRooms).includes(roomName) && remoteClaimers.length < 0 && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+                            // var newName = 'RC_2.0_' + Game.time + "_" + roomName + "_" + room_level;
+                            // status = room_spawn.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY], newName,
+                                // {memory: {role: 'remote_claimer'}});
+                        // }
+                    }
+                }else{
+                    var newUpgraderName = 'U_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                        status = room_spawn.spawnCreep(Ugrader_BP, newUpgraderName,
+                            {memory: {role: 'upgrader'}});
+                }
             }
 
-            var claimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'claimer');
-            if(claimers.length < maxClaimers && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
-                var newClaimerName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep(Claimer_BP, newClaimerName,
-                    {memory: {role: 'claimer'}});
-            }
-            var builders_m = _.filter(Game.creeps, (creep) => creep.memory.role === 'builder_m');
-            if(builders_m.length < maxBuildersM && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
-                var newBuilderMName = 'BM_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep(Builder_M_BP, newBuilderMName,
-                    {memory: {role: 'builder_m'}});
-            }
-            var remoteClaimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'remote_claimer');
-            if(Object.values(Memory.ClaimingRooms).includes(roomName) && remoteClaimers.length < 0 && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
-                var newName = 'RC_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
-                status = room_spawn.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY], newName,
-                    {memory: {role: 'remote_claimer'}});
-            }
 
+            // if((harvesters.length - reserve_harvesters.length) < maxHarvesters && testIfCanSpawn == 0){
+                // var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep(Harvester_BP, newHarvesterName,
+                    // {memory: {role: 'harvester'}});
+            // }else if (testIfCanSpawn == -6 && (centers.length == 0 && testIfCanSpawnC != 0) && reserve_harvesters.length == 0){
+                // var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep([WORK,CARRY,MOVE], newHarvesterName,
+                    // {memory: {role: 'harvester'}});
+            // }
+            // if(upgraders.length < maxUpgraders && (harvesters.length >= maxHarvesters && centers.length >= maxCenters) && testIfCanSpawn == 0){
+                // var newUpgraderName = 'U_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep(Ugrader_BP, newUpgraderName,
+                    // {memory: {role: 'upgrader'}});
+            // }
+            // if(builders.length < maxBuilders && harvesters.length >= maxHarvesters && global.getConstructionSites(room_spawn.room.name).length > 0 && upgraders.length >= maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+                // var newBuilderName = 'B_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep(Builder_BP, newBuilderName,
+                    // {memory: {role: 'builder'}});
+            // }
+            // if(transfers.length < maxTransferers && harvesters.length == maxHarvesters && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+                // var newTransferName = 'T_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
+                    // {memory: {role: 'transfer'}});
+            // }
+            // if(miners.length < maxMiners && harvesters.length == maxHarvesters && global.getCachedStructures(roomName, STRUCTURE_EXTRACTOR).length > 0 && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+                // var newMinerName = 'M_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep(Miner_BP, newMinerName,
+                    // {memory: {role: 'miner'}});
+            // }
+            // if(maintainers.length < maxMaintenancers && harvesters.length == maxHarvesters && upgraders.length == maxUpgraders && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+            //     var newMaintainerName = 'R_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+            //     status = room_spawn.spawnCreep(Maintenancer_BP, newMaintainerName,
+            //         {memory: {role: 'maintainer'}});
+            // }
+            // if(centers.length < maxCenters && /*global.getCachedStructures(roomName, STRUCTURE_LINK).concat(getCachedStructures(roomName, STRUCTURE_CONTAINER)).length >= 1 &&*/ testIfCanSpawnC == 0 && testIfCanSpawn == 0){
+                // var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep(CenterBP, newCenterName,
+                    // {memory: {role: 'center'}});
+            // }else if(centers.length == 0){
+                // var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep([CARRY,MOVE,CARRY,MOVE,CARRY,MOVE], newCenterName,
+                    // {memory: {role: 'center'}});
+            // }
+            // if(harvester_upgr.length < maxHarvestersUpgr && harvesters.length >= maxHarvesters && global.getSources(room_spawn.room.name).length >= 2 && testIfCanSpawn == 0 && upgraders.length >= maxUpgraders) {
+                // var newHarvesterUpgrName = 'HU_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep(HarvesterUpgr_BP, newHarvesterUpgrName,
+                    // {memory: {role: 'harvester_upgr'}});
+            // }
+            // if(harvesters.length < 1 && centers.length == 0 && testIfCanSpawn != 0){
+                // var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep([WORK,CARRY,MOVE], newHarvesterName,
+                    // {memory: {role: 'harvester'}});
+            // }
+            // if(centers.length < 1 && centers.length < maxCenters && (testIfCanSpawn == -6 || testIfCanSpawnC == -6)){
+                // var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep([CARRY,MOVE,CARRY,MOVE,CARRY,MOVE], newCenterName,
+                    // {memory: {role: 'center'}});
+            // }
+
+            // var claimers = _.filter(Game.creeps, (creep) => creep.memory.role === 'claimer');
+            // if(claimers.length < maxClaimers && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0 && Memory.ClaimingRooms.includes(roomName)){
+                // var newClaimerName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                // status = room_spawn.spawnCreep(Claimer_BP, newClaimerName,
+                    // {memory: {role: 'claimer'}});
+            // }
+            // if(builders_m.length < maxBuildersM && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+            //     var newBuilderMName = 'BM_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+            //     status = room_spawn.spawnCreep(Builder_M_BP, newBuilderMName,
+            //         {memory: {role: 'builder_m'}});
+            // }
+            // if(Object.values(Memory.ClaimingRooms).includes(roomName) && remoteClaimers.length < 0 && harvesters.length == maxHarvesters && testIfCanSpawn == 0 && reserve_harvesters.length == 0){
+            //     var newName = 'RC_2.0_' + Game.time + "_" + roomName + "_" + room_level;
+            //     status = room_spawn.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY], newName,
+            //         {memory: {role: 'remote_claimer'}});
+            // }
+            
             // console.log(roomName, status);
        });
 
 
     //terminals
-    if(Game.time % 10 == 1){
+        const terminal = Game.rooms[roomName].terminal
+        if(terminal && terminal.cooldown == 0){
+            const mineralType = global.getMinerals(roomName)[0].mineralType;
+
+            if(terminal.store[mineralType] > 50000){
+                const myOrders = Game.market.orders;
+                const orders = [];
+                for(const id in myOrders){
+                    const order = myOrders[id];
+                    if(order.resourceType == mineralType && order.type == ORDER_SELL && order.roomName === roomName){
+                        orders.push(myOrders[id]);
+                    }
+                }
+                if(orders.length == 0){
+                    var otherOrders = Game.market.getAllOrders(order => order.resourceType == mineralType &&
+                      order.type == ORDER_SELL);
+                      otherOrders.sort(function(a,b){return a.price - b.price;});
+                    if(otherOrders.length > 0){
+                        Game.market.createOrder({
+                            type: ORDER_SELL,
+                            resourceType: mineralType,
+                            price: otherOrders[0].price - (otherOrders[0].price * 0.01),
+                            totalAmount: terminal.store[mineralType] * 0.25,
+                            roomName: roomName
+                        });
+                    }
+                }
+            }
+            if(terminal.store[mineralType] > 100000){
+                const otherOrders = Game.market.getAllOrders(order => order.resourceType == mineralType &&
+                    order.type == ORDER_BUY &&
+                    Game.market.calcTransactionCost(order.amount, roomName, order.roomName) < terminal.store[RESOURCE_ENERGY] * 0.8);
+                if(otherOrders.length > 0){
+                    otherOrders.sort(function(a,b){return b.price - a.price;});
+                    const order = otherOrders[0];
+                    // let amount = 0;
+                    // if(order.amount > terminal.store[mineralType]){
+                    //     amount = terminal.store[mineralType];
+                    // }else{
+                    //     amount = order.amount;
+                    // }
+                    Game.market.deal(order.id, Math.min(terminal.store[mineralType], order.amount), roomName);
+                }
+                
+            }
+
+            if(terminal.store[RESOURCE_ENERGY] > 100000){
+                const myOrders = Game.market.orders;
+                const orders = [];
+                for(const id in myOrders){
+                    const order = myOrders[id];
+                    if(order.resourceType == RESOURCE_ENERGY && order.type == ORDER_SELL && order.roomName === roomName){
+                        orders.push(myOrders[id]);
+                    }
+                }
+                if(orders.length == 0){
+                    var otherOrders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_ENERGY &&
+                      order.type == ORDER_SELL);
+                      otherOrders.sort(function(a,b){return a.price - b.price;});
+                    if(otherOrders.length > 0){
+                        Game.market.createOrder({
+                            type: ORDER_SELL,
+                            resourceType: RESOURCE_ENERGY,
+                            price: otherOrders[0].price - (otherOrders[0].price * 0.01),
+                            totalAmount: terminal.store[RESOURCE_ENERGY] * 0.25,
+                            roomName: roomName
+                        });
+                    }
+                }
+            }
+        }
         // const priorityRooms = getRoomPriorityBySourceCount();
         // if(Game.rooms[roomName].terminal != undefined){
         //     const terminal = Game.rooms[roomName].terminal;
@@ -2041,8 +2463,6 @@ module.exports.loop = function() {
         //             }
         //     }
         // // }
-    
-        }
     });
     // console.log(InterShardMemory.getLocal());
     if(Game.shard.name === 'shard3'){

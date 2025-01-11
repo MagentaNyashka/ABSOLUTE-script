@@ -1,74 +1,80 @@
-var roleClaimer = {
-    run: function(creep) {
-        anotherRoomName = 'E2N24';
-        RoomName = '[room E2N24]'
-        console.log(creep.room);
-        if(creep.room != RoomName) {
-            const exitDir = Game.map.findExit(creep.room, anotherRoomName);
-            const exit = creep.pos.findClosestByPath(exitDir);
-            if(exitDir == 1 && creep.pos.x == 0){
-                creep.move(RIGHT);
-            }
-            if(exitDir == 1 && creep.pos.x == 49){
-                creep.move(LEFT);
-            }
-            if(exitDir == 1 && creep.pos.y == 49){
-                creep.move(TOP);
-            }
-            if(exitDir == 3 && creep.pos.x == 0){
-                creep.move(RIGHT);
-            }
-            if(exitDir == 3 && creep.pos.y == 0){
-                creep.move(BOTTOM);
-            }
-            if(exitDir == 3 && creep.pos.y == 49){
-                creep.move(TOP);
-            }
-            if(exitDir == 5 && creep.pos.x == 0){
-                creep.move(RIGHT);
-            }
-            if(exitDir == 5 && creep.pos.x == 49){
-                creep.move(LEFT);
-            }
-            if(exitDir == 5 && creep.pos.y == 0){
-                creep.move(BOTTOM);
-            }
-            if(exitDir == 7 && creep.pos.x == 49){
-                creep.move(LEFT);
-            }
-            if(exitDir == 7 && creep.pos.y == 0){
-                creep.move(BOTTOM);
-            }
-            if(exitDir == 7 && creep.pos.y == 49){
-                creep.move(TOP);
-            }
-            creep.moveTo(exit, {visualizePathStyle: {stroke: '#800080'}});
-            console.log(exitDir);
-        }
-        if(creep.room == RoomName){
-            if(creep.pos.x == 0){
-                creep.move(RIGHT);
-            }
-            if(creep.pos.x == 49){
-                creep.move(LEFT);
-            }
-            if(creep.pos.y == 0){
-                creep.move(BOTTOM);
-            }
-            if(creep.pos.y == 49){
-                creep.move(TOP);
-            }
-            if(creep.room.controller) {
-                if(creep.claimController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(creep.room.controller, {visualizePathStyle: {stroke: '#00ffff'}});
-                }
-                if(creep.claimController(creep.room.controller) != ERR_NOT_IN_RANGE){
-                    Game.rooms[creep.room.name].createConstructionSite(creep.pos.x, creep.pos.y, STRUCTURE_SPAWN, 'Spawn_' + RoomName);
-                    creep.suicide();
-                }
-            }
-        }
+function findSafeRoute(originRoom, targetRoom) {
+    const route = Game.map.findRoute(originRoom, targetRoom, {
+        routeCallback(roomName, fromRoomName) {
+            const room = Game.rooms[roomName]; // Get room if visible
 
+            // If the room is visible
+            if (room) {
+                const controller = room.controller;
+                if (controller) {
+                    // Avoid rooms with hostile controllers
+                    if (
+                        (controller.owner && !controller.my) || // Hostile owned
+                        (controller.reservation && controller.reservation.username !== 'Purpl3_Br1ck') // Hostile reserved
+                    ) {
+                        return Infinity;
+                    }
+                }
+            } else {
+                // If the room is not visible, assume it may be hostile
+                return 5; // Assign a high but finite cost to discourage using unexplored rooms
+            }
+
+            // Default cost for neutral or friendly rooms
+            return 1;
+        }
+    });
+
+    if (route === ERR_NO_PATH) {
+        console.log(`No safe route found from ${originRoom} to ${targetRoom}`);
+        return null;
     }
+
+    return route;
+}
+
+
+const roleClaimer = {
+    run(creep) {
+        const roomName = creep.room.name;
+        const targetRoom = creep.memory.targetRoom || Memory.claimableRooms[0];
+
+        if (roomName !== targetRoom) {
+
+
+            if (!creep.memory.route || creep.memory.route[0].room === roomName) {
+                const route = findSafeRoute(roomName, targetRoom);
+                if (!route) {
+                    return;
+                }
+                creep.memory.route = route;
+            }
+
+            const nextStep = creep.memory.route[0];
+            if (nextStep && nextStep.room !== roomName) {
+                const status = creep.moveTo(new RoomPosition(25, 25, nextStep.room), {
+                    visualizePathStyle: { stroke: '#00ffff' },
+                    reusePath: 50,
+                });
+                return;
+            }
+        } else {
+            creep.memory.route = null;
+
+            const controller = creep.room.controller;
+            if (controller && !controller.my) {
+                if (creep.claimController(controller) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(controller, {
+                        visualizePathStyle: { stroke: '#00ffff' }
+                    });
+                }
+            }else{
+                creep.moveTo(25,25, {
+                    visualizePathStyle: { stroke: '#00ffff' }
+                });
+            }
+        }
+    },
 };
+
 module.exports = roleClaimer;

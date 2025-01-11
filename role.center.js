@@ -36,7 +36,7 @@ var roleCenter = {
                         creep.memory.target = towers[0].id;
                     }
                     else{
-                        const cont_containers = global.getControllerContainers(roomName).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+                        const cont_containers = global.getControllerContainers(roomName).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 400);
                         if(cont_containers.length > 0){
                             // cont_containers.sort(function(a, b){return a.store.getFreeCapacity(RESOURCE_ENERGY) - b.store.getFreeCapacity(RESOURCE_ENERGY)});
                             creep.memory.target = cont_containers[0].id;
@@ -171,7 +171,7 @@ Cus I don’t want you hearing about me
         else {
             if(!creep.memory.target){
                 const links = global.getDestLinks(roomName);
-                const containers = global.getSourceContainers(roomName)
+                const containers = global.getSourceContainers(roomName);
                 const energyStructures = links.concat(containers).filter(s => s.store[RESOURCE_ENERGY] > 0);
                 energyStructures.sort((a, b) => b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY]);
                 if(energyStructures.length > 0){

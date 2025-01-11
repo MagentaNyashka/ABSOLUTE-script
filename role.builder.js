@@ -44,10 +44,10 @@ var roleBuilder = {
                     if(terminal && terminal.store[RESOURCE_ENERGY] > 0){
                         creep.memory.target = terminal.id;
                     }else{
-                        const energyStructures = global.getCachedStructures(roomName, STRUCTURE_CONTAINER)
-                            .concat(global.getDestLinks(roomName) || [])
-                            .concat(creep.room.terminal || [])
-                            .filter(structure => structure.store[RESOURCE_ENERGY] > 0);
+                        const energyStructures = global.getSourceContainers(roomName)
+                            .concat(global.getDestContainers(roomName) || [])
+                            .concat(global.getDestLinks(roomName) || []);
+                            // .filter(structure => structure.store[RESOURCE_ENERGY] > 0);
                         if (energyStructures.length > 0) {
                             creep.memory.target = creep.pos.findClosestByPath(energyStructures).id;
                         } else {
