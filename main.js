@@ -2602,7 +2602,7 @@ module.exports.loop = function() {
             _.forEach(RESOURCE_TYPES, function(RESOURCE){
                 if(RESOURCE != RESOURCE_ENERGY){
                 const excludeCapacity = terminal.store.getCapacity() - terminal.store[RESOURCE_ENERGY] - 10000;
-                    if(terminal.store[RESOURCE] > excludeCapacity/50){
+                    if(terminal.store[RESOURCE] > excludeCapacity/uniqueResourceCount){
                         const myOrders = Game.market.orders;
                         const orders = [];
                         for(const id in myOrders){
