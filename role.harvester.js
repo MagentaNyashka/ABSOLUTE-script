@@ -25,9 +25,9 @@ var roleHarvester = {
                     .filter(structure => structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
             
                 if (transferTargets.length > 0 && energyStructures.length === 0) {
-                    creep.memory.target = creep.pos.findClosestByPath(transferTargets).id;
+                    creep.memory.target = creep.pos.findClosestByRange(transferTargets).id;
                 } else if (energyStructures.length > 0) {
-                    creep.memory.target = creep.pos.findClosestByPath(energyStructures).id;
+                    creep.memory.target = creep.pos.findClosestByRange(energyStructures).id;
                 } else {
                     const towers = global.getCachedStructures(roomName, STRUCTURE_TOWER).filter(
                         structure => structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0

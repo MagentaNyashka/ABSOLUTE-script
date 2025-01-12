@@ -17,7 +17,6 @@ var roleCenter = {
             creep.memory.transferring = true;
             delete creep.memory.target;
         }
-
         if(creep.memory.transferring) {
             if (!creep.memory.target) {
                 const extentions = global.getCachedStructures(roomName, STRUCTURE_EXTENSION).concat(global.getCachedStructures(roomName,STRUCTURE_SPAWN)).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
