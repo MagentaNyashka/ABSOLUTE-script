@@ -27,9 +27,15 @@ const roleRemoteClaimer = require('./role.claimRoom');
 
 //NOTES FOR FUTURE
 /*
-Make request system for terminals
-Move creeps info(max per role and BPs) to global
-Optimize Memory usage
+[+]Make request system for terminals
+[-]Update request systen for terminals
+[-]Move creeps info(max per role and BPs) to global
+[-]Optimize Memory usage:
+    - Make room properties like:
+        - Memory.roomProperties[roomName].cache.roomPlan
+        - Memory.roomProperties[roomName].labProtocol
+        - Memory.roomProperties[roomName].useBoosts[RESOURCE...]
+        - Memory.roomProperties[roomName].isAttacking = true
 
 
 request{
@@ -2621,7 +2627,7 @@ module.exports.loop = function() {
                                 type: ORDER_SELL,
                                 resourceType: RESOURCE,
                                 price: otherOrders[0].price - (otherOrders[0].price * 0.01),
-                                totalAmount: terminal.store[RESOURCE] * 0.25,
+                                totalAmount: terminal.store[RESOURCE] * 0.75,
                                 roomName: roomName
                             });
                         }
