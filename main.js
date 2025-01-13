@@ -2591,18 +2591,19 @@ module.exports.loop = function() {
                 // }
             }
             
-            let uniqueResourceCount = 0;
+            let uniqueResources = [];
             _.forEach(RESOURCE_TYPES, function(RESOURCE){
                 if(RESOURCE != RESOURCE_ENERGY){
                     if(terminal.store[RESOURCE] > 0){
-                        uniqueResourceCount++;
+                        uniqueResources.push(RESOURCE);
                     }
                 }
             });
-            _.forEach(RESOURCE_TYPES, function(RESOURCE){
+
+            _.forEach(uniqueResources, function(RESOURCE){
                 if(RESOURCE != RESOURCE_ENERGY){
                 const excludeCapacity = terminal.store.getCapacity() - terminal.store[RESOURCE_ENERGY] - 10000;
-                    if(terminal.store[RESOURCE] > excludeCapacity/uniqueResourceCount){
+                    if(terminal.store[RESOURCE] > excludeCapacity/uniqueResources.length){
                         const myOrders = Game.market.orders;
                         const orders = [];
                         for(const id in myOrders){
