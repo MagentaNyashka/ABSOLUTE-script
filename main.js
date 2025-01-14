@@ -37,7 +37,7 @@ const roleRemoteClaimer = require('./role.claimRoom');
         - Memory.roomProperties[roomName].useBoosts[RESOURCE...]
         - Memory.roomProperties[roomName].isAttacking = true
 [-]Create auto-building algorithm
-[-]Refactor spawn behavior
+[+-]Refactor spawn behavior
 request{
     roomName: 'E1N24',
     resourceType: 'L',
@@ -388,7 +388,8 @@ const MAIN_BLOCK = [
     { x: -1, y: 0, structure: STRUCTURE_LINK },
     { x: 0, y: -1, structure: STRUCTURE_STORAGE },
     { x: 0, y: 1, structure: STRUCTURE_TERMINAL },
-    { x: 1, y: 0, structure: STRUCTURE_NUKER }
+    { x: 1, y: 0, structure: STRUCTURE_NUKER },
+    { x: 1, y: -1, structure: STRUCTURE_ROAD },
 ]
 
 
@@ -470,6 +471,21 @@ function getPointsFromCenter(center, delta) {
     }
 
     return points;
+}
+
+function findPlaceForMainCenter(roomName){
+    const center = findCenter(roomName);
+    let fittingCenter = center;
+    const terrain = new Room.Terrain(roomName);
+    // let isAvailable = false;
+    for(let x = center.x-2; x < center.x+2; x++){
+        for(let y = center.y-2; x < center.y+2; y++){
+            if(terrain.get(x,y) === TERRAIN_MASK_WALL || terrain.get(x,y) === TERRAIN_MASK_LAVA){
+                new RoomVisual(roomName).circle(x,y);
+            }
+        }
+    }
+    
 }
 
 const renderTerrain = false;
@@ -2267,7 +2283,8 @@ module.exports.loop = function() {
     // placeBlock('E2N24', {x: 40, y:22}, EXT_BLOCK);
     // placeBlock('E2N24', {x: 38, y:24}, CORE_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, LINK_BLOCK);
-    placeBlock('E2N24', {x: 38, y:20}, MAIN_BLOCK);
+    // placeBlock('E2N24', {x: 38, y:20}, MAIN_BLOCK);
+    findPlaceForMainCenter('E2N24');
     // console.log(getRoomPriorityBySourceCount());
     // if(Game.shard.name === 'shard2'){console.log(Math.min(global.getFreeSources('E1N29', global.getSources('E1N29')[0].id).length,2));}   
     // console.log(findClosestHighwayRoom('E1N24'));
