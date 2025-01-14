@@ -475,15 +475,15 @@ function getPointsFromCenter(center, delta) {
 
 function findPlaceForMainCenter(roomName){
     const center = findCenter(roomName);
-    let fittingCenter = center;
-    const terrain = new Room.Terrain(roomName);
-    for(let x = fittingCenter.x-2; x < fittingCenter.x+2; x++){
-        for(let y = fittingCenter.y-2; x < fittingCenter.y+2; y++){
-            if(terrain.get(x,y) === TERRAIN_MASK_WALL || terrain.get(x,y) === TERRAIN_MASK_LAVA){
-                new RoomVisual(roomName).circle(x,y);
-            }
-        }
-    }
+    console.log(center);
+    // const terrain = new Room.Terrain(roomName);
+    // for(let x = fittingCenter.x-2; x < fittingCenter.x+2; x++){
+    //     for(let y = fittingCenter.y-2; x < fittingCenter.y+2; y++){
+    //         if(terrain.get(x,y) === TERRAIN_MASK_WALL || terrain.get(x,y) === TERRAIN_MASK_LAVA){
+    //             new RoomVisual(roomName).circle(x,y);
+    //         }
+    //     }
+    // }
 }
 
 const renderTerrain = false;
