@@ -475,7 +475,6 @@ function getPointsFromCenter(center, delta) {
 
 function findPlaceForMainCenter(roomName){
     const center = findCenter(roomName);
-    if(!center) return;
     let fittingCenter = center;
     const terrain = new Room.Terrain(roomName);
     for(let x = fittingCenter.x-2; x < fittingCenter.x+2; x++){
@@ -2283,7 +2282,7 @@ module.exports.loop = function() {
     // placeBlock('E2N24', {x: 38, y:24}, CORE_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, LINK_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, MAIN_BLOCK);
-    findPlaceForMainCenter('E2N24');
+    // findPlaceForMainCenter('E2N24');
     // console.log(getRoomPriorityBySourceCount());
     // if(Game.shard.name === 'shard2'){console.log(Math.min(global.getFreeSources('E1N29', global.getSources('E1N29')[0].id).length,2));}   
     // console.log(findClosestHighwayRoom('E1N24'));
