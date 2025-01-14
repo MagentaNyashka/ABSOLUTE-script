@@ -475,6 +475,7 @@ function getPointsFromCenter(center, delta) {
 
 function findPlaceForMainCenter(roomName){
     const center = findCenter(roomName);
+    if(!center) return;
     let fittingCenter = center;
     const terrain = new Room.Terrain(roomName);
     for(let x = fittingCenter.x-2; x < fittingCenter.x+2; x++){
