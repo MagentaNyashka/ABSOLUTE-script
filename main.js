@@ -403,7 +403,8 @@ const BLOCK_TYPES = [
 
 
 function placeBlock(roomName, origin, block) {
-    const actualBlock = block.concat(ROAD_BLOCK);
+    // const actualBlock = block.concat(ROAD_BLOCK);
+    const actualBlock = block;
     actualBlock.forEach(({ x, y, structure }) => {
         const absX = origin.x + x;
         const absY = origin.y + y;
