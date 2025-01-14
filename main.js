@@ -474,7 +474,8 @@ function getPointsFromCenter(center, delta) {
 }
 
 function findPlaceForMainCenter(roomName){
-    const center = findCenter(roomName);
+    // const center = findCenter(roomName);
+    const center = {x: 7, y:37, roomName:roomName};
     console.log(center);
     if(center != null){
         const terrain = new Room.Terrain(roomName);
