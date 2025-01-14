@@ -59,6 +59,57 @@ function cancelInacativeOrders(){
     }
 }
 
+function relistOldOrders() {
+    if (Game.time % 1000 !== 0) return;
+
+    const orders = Game.market.orders;
+
+    _.forEach(orders, function(order) {
+        if (Game.time - order.created > 10000) {
+            const resourceType = order.resourceType;
+            const orderType = order.type;
+
+            const otherOrders = Game.market.getAllOrders(o => 
+                o.resourceType === resourceType && o.type === orderType
+            );
+
+            if (otherOrders.length === 0) return; 
+
+            otherOrders.sort((a, b) => orderType === ORDER_BUY 
+                ? b.price - a.price
+                : a.price - b.price
+            );
+
+            const orderIndex = otherOrders.findIndex(o => o.id === order.id);
+            console.log(orderIndex);
+            if (orderIndex > 5) {
+                Game.market.cancelOrder(order.id);
+
+                const topOrderPrice = otherOrders[0].price;
+                const priceAdjustment = topOrderPrice * 0.01;
+                const newPrice = orderType === ORDER_BUY 
+                    ? topOrderPrice + priceAdjustment
+                    : topOrderPrice - priceAdjustment;
+
+                const roomName = order.roomName;
+                const terminal = Game.rooms[roomName].terminal;
+                const amount = order.amount;
+
+                if (!terminal || terminal.store[resourceType] <= 0) return;
+
+                Game.market.createOrder({
+                    type: orderType,
+                    resourceType: resourceType,
+                    price: newPrice,
+                    totalAmount: amount,
+                    roomName: roomName
+                });
+            }
+        }
+    });
+}
+
+
 
 if(!Memory.requests){
     Memory.requests = [];
@@ -235,6 +286,7 @@ const MCONT = "mineralContainers";
 const SLAB = "sourceLab";
 const DLAB = "destinationLab";
 const BLAB = "boostLab";
+const ANY = "any";
 
 var price_old = -100;
 var price_old_x = -100;
@@ -284,6 +336,164 @@ function Request(roomName, resourceType, amount) {
     this.timeCreated = Game.time;
 }
 
+
+const EXT_BLOCK = [
+    { x: 0, y: 0, structure: STRUCTURE_EXTENSION },
+    { x: 1, y: 0, structure: STRUCTURE_EXTENSION },
+    { x: 0, y: 1, structure: STRUCTURE_EXTENSION },
+    { x: -1, y: 0, structure: STRUCTURE_EXTENSION },
+    { x: 0, y: -1, structure: STRUCTURE_EXTENSION },
+];
+
+const SPAWN_BLOCK = [
+    { x: 0, y: 0, structure: STRUCTURE_SPAWN },
+    { x: 1, y: 0, structure: STRUCTURE_EXTENSION },
+    { x: 0, y: 1, structure: STRUCTURE_EXTENSION },
+    { x: -1, y: 0, structure: STRUCTURE_EXTENSION },
+    { x: 0, y: -1, structure: STRUCTURE_EXTENSION },
+];
+
+const LINK_BLOCK = [
+    { x: 0, y: 0, structure: STRUCTURE_LINK },
+    { x: 1, y: 0, structure: STRUCTURE_EXTENSION },
+    { x: 0, y: 1, structure: STRUCTURE_EXTENSION },
+    { x: -1, y: 0, structure: STRUCTURE_EXTENSION },
+    { x: 0, y: -1, structure: STRUCTURE_EXTENSION },
+];
+
+const CORE_BLOCK = [
+    { x: 0, y: 0, structure: STRUCTURE_POWER_SPAWN },
+    { x: 1, y: 0, structure: STRUCTURE_NUKER },
+    { x: 0, y: 1, structure: STRUCTURE_TERMINAL },
+    { x: -1, y: 0, structure: STRUCTURE_FACTORY },
+    { x: 0, y: -1, structure: STRUCTURE_STORAGE },
+];
+
+const ROAD_BLOCK = [
+    { x: 0, y: 2, structure: STRUCTURE_ROAD },
+    { x: 1, y: 1, structure: STRUCTURE_ROAD },
+    { x: 2, y: 0, structure: STRUCTURE_ROAD },
+    { x: 1, y: -1, structure: STRUCTURE_ROAD },
+    { x: 0, y: -2, structure: STRUCTURE_ROAD },
+    { x: -1, y: -1, structure: STRUCTURE_ROAD },
+    { x: -2, y: 0, structure: STRUCTURE_ROAD },
+    { x: -1, y: 1, structure: STRUCTURE_ROAD },
+]
+
+const BLOCK_TYPES = [
+    EXT_BLOCK,
+    SPAWN_BLOCK,
+    LINK_BLOCK,
+    CORE_BLOCK,
+    ROAD_BLOCK
+]
+
+function placeBlock(roomName, origin, block) {
+    const actualBlock = block.concat(ROAD_BLOCK);
+    actualBlock.forEach(({ x, y, structure }) => {
+        const absX = origin.x + x;
+        const absY = origin.y + y;
+
+        if (absX >= 0 && absX < 50 && absY >= 0 && absY < 50) {
+            new RoomVisual(roomName).text(structure[0], absX, absY);
+        }
+    });
+}
+
+function findCenter(roomName) {
+    const room = Game.rooms[roomName];
+    if (!room) {
+        console.log(`Room ${roomName} not visible.`);
+        return null;
+    }
+
+    const positions = [];
+
+    const sources = room.find(FIND_SOURCES);
+    sources.forEach(source => positions.push(source.pos));
+
+    if (room.controller) {
+        positions.push(room.controller.pos);
+    }
+
+    const mineral = room.find(FIND_MINERALS)[0];
+    if (mineral) {
+        positions.push(mineral.pos);
+    }
+
+    if (positions.length === 0) {
+        return null;
+    }
+
+    const centerX = Math.round(_.sum(positions.map(pos => pos.x)) / positions.length);
+    const centerY = Math.round(_.sum(positions.map(pos => pos.y)) / positions.length);
+
+    return new RoomPosition(centerX, centerY, roomName);
+}
+
+function getPointsFromCenter(center, delta) {
+    const points = [];
+    let originX = center.x;
+    let originY = center.y;
+
+    while (originX > 0) {
+        originX -= delta;
+    }
+    while (originY > 0) {
+        originY -= delta;
+    }
+
+    for (let x = originX; x < 50; x += delta) {
+        for (let y = originY; y < 50; y += delta) {
+            if (x >= 0 && x < 50 && y >= 0 && y < 50) {
+                points.push(new RoomPosition(x, y, center.roomName));
+                if (x+2 >= 0 && x+2 < 50 && y+2 >= 0 && y+2 < 50) {
+                    points.push(new RoomPosition(x+2, y+2, center.roomName));
+                }
+            }
+        }
+    }
+
+    return points;
+}
+
+const renderTerrain = false;
+
+function terrainAnalyze(roomName){
+    const terrain = new Room.Terrain(roomName);
+    for(let y = 0; y < 50; y++){
+        for(let x = 0; x < 50; x++){
+            const terrain_obj = terrain.get(x,y);
+            let block;
+            switch(terrain_obj){
+                case TERRAIN_MASK_WALL:
+                    block = 'W';
+                    break;
+                case TERRAIN_MASK_SWAMP:
+                    block = 'S';
+                    break;
+                case TERRAIN_MASK_LAVA:
+                    block = 'L';
+                    break;
+                default:
+                    block = 'P';
+            }
+            if(renderTerrain){
+                new RoomVisual(roomName).text(block, x, y+0.22);
+            }
+        }
+    }
+    const center = findCenter(roomName);
+    if(center){
+        new RoomVisual(center.roomName).circle(center, { radius: 0.5, fill: 'yellow' });
+
+        const pivots = getPointsFromCenter(center, 4);
+        console.log(pivots);
+        _.forEach(pivots, function(pivot){
+            new RoomVisual(pivot.roomName).circle(pivot, { radius: 0.5, fill: 'green' });
+        });
+    }
+}
 
 function hashCode(str) {
     let hash = 0;
@@ -547,7 +757,8 @@ function render(){
             bucket: Game.cpu.bucket,
             creeps: Object.keys(Game.creeps).length,
             gcl: Game.gcl.progress,
-            gclTotal: Game.gcl.progressTotal
+            gclTotal: Game.gcl.progressTotal,
+            credits: Game.market.credits
         }
         RawMemory.segments[1] = JSON.stringify(stringify);
     }
@@ -963,6 +1174,32 @@ global.getBoostLabs = function(roomName){
     }
 
     return global.cache[roomName][BLAB];
+};
+
+global.getAllStuctures = function(roomName){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache[roomName]){
+        global.cache[roomName] = {};
+    }
+    if(!global.cache[roomName][ANY]){
+        if(!Memory.cache){
+            return;
+        }
+        if(!Memory.cache.roomPlan){
+            return;
+        }
+        if(!Memory.cache.roomPlan[roomName]){
+            return;
+        }
+        
+        const structures = Game.rooms[roomName].find(FIND_STRUCTURES);
+
+        global.cache[roomName][ANY] = structures;
+    }
+
+    return global.cache[roomName][ANY];
 };
 
 global.getControllerContainers = function(roomName){
@@ -2009,7 +2246,12 @@ function runLabs(roomName){
 profiler.enable();
 module.exports.loop = function() {
     dark_mode();
-    cancelInacativeOrders();
+    // cancelInacativeOrders();
+    relistOldOrders();
+    // terrainAnalyze('E2N24');
+    // placeBlock('E2N24', {x: 40, y:22}, EXT_BLOCK);
+    // placeBlock('E2N24', {x: 38, y:24}, CORE_BLOCK);
+    // placeBlock('E2N24', {x: 38, y:20}, LINK_BLOCK);
     // console.log(getRoomPriorityBySourceCount());
     // if(Game.shard.name === 'shard2'){console.log(Math.min(global.getFreeSources('E1N29', global.getSources('E1N29')[0].id).length,2));}   
     // console.log(findClosestHighwayRoom('E1N24'));
@@ -2609,7 +2851,7 @@ module.exports.loop = function() {
             _.forEach(uniqueResources, function(RESOURCE){
                 if(RESOURCE != RESOURCE_ENERGY){
                 const excludeCapacity = terminal.store.getCapacity() - terminal.store[RESOURCE_ENERGY] - 10000;
-                    if(terminal.store[RESOURCE] > excludeCapacity/uniqueResources.length){
+                    if(terminal.store[RESOURCE] > excludeCapacity/(uniqueResources.length*1.75)){
                         const myOrders = Game.market.orders;
                         const orders = [];
                         for(const id in myOrders){
@@ -2637,6 +2879,14 @@ module.exports.loop = function() {
                                     Game.market.extendOrder(order.id, terminal.store[RESOURCE] * 0.25);
                                 }
                             });
+                        }
+                    }
+                    if(terminal.store[RESOURCE] > excludeCapacity/uniqueResources.length){
+                        var otherOrders = Game.market.getAllOrders(order => order.resourceType == RESOURCE &&
+                        order.type == ORDER_BUY);
+                        otherOrders.sort(function(a,b){return b.price - a.price;});
+                        if(otherOrders.length > 0){
+                            Game.market.deal(otherOrders[0].id, Math.min(otherOrders[0].amount, terminal.store[RESOURCE]*0.25), roomName);
                         }
                     }
                 }

@@ -41,19 +41,23 @@ var roleCenter = {
                             creep.memory.target = cont_containers[0].id;
                         }
                         else{
-                        const nukers = global.getCachedStructures(roomName, STRUCTURE_NUKER).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
-                        if(nukers.length > 0){
-                            creep.memory.target = nukers[0].id;
-                        }
-                        else{
-                            const terminals = Game.rooms[roomName].terminal;
-                            if(terminals && terminals.store[RESOURCE_ENERGY] < 150000){
-                                creep.memory.target = terminals.id;
-                            }
-                            else{
-                                const storages = Game.rooms[roomName].storage;
+                            const nukers = global.getCachedStructures(roomName, STRUCTURE_NUKER).filter(s => s.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+                            if(nukers.length > 0){
+                                creep.memory.target = nukers[0].id;
+                            }else{
+                                const terminals = Game.rooms[roomName].terminal;
+                                if(terminals && terminals.store[RESOURCE_ENERGY] < 150000){
+                                    creep.memory.target = terminals.id;
+                                }
+                                else{
+                                    const storages = Game.rooms[roomName].storage;
                                     if(storages && storages.store[RESOURCE_ENERGY] < 500000){
                                         creep.memory.target = storages.id;
+                                    }else{
+                                        const bLabs = global.getBoostLabs(roomName).filter(l => l.store[RESOURCE_ENERGY] < l.store.getFreeCapacity(RESOURCE_ENERGY));
+                                        if(bLabs.length > 0){
+                                            creep.memory.target = bLabs[0].id;
+                                        }
                                     }
                                 }
                             }

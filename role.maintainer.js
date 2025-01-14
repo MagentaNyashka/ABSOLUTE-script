@@ -12,9 +12,10 @@ var roleMaintainer = {
 
             if(creep.memory.working) {
                 if(!creep.memory.target) {
-                    const roads = global.getCachedStructures(roomName, STRUCTURE_ROAD).concat(global.getCachedStructures(roomName, STRUCTURE_CONTAINER)).filter(s => s.hits < s.hitsMax);
-                    if(roads.length > 0) {
-                        creep.memory.target = roads.sort((a, b) => (a.hits/a.hitsMax) - (b.hits/b.hitsMax))[0].id;
+                    // const roads = global.getCachedStructures(roomName, STRUCTURE_ROAD).concat(global.getCachedStructures(roomName, STRUCTURE_CONTAINER)).filter(s => s.hits < s.hitsMax);
+                    const damagedStructures = global.getAllStuctures(roomName).filter(s => s.hits < s.hitsMax);
+                    if(damagedStructures.length > 0) {
+                        creep.memory.target = damagedStructures.sort((a, b) => (a.hits/a.hitsMax) - (b.hits/b.hitsMax))[0].id;
                     }
                 }
                 const target = Game.getObjectById(creep.memory.target);
