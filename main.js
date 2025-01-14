@@ -478,8 +478,9 @@ function findPlaceForMainCenter(roomName){
     console.log(center);
     if(center != null){
         const terrain = new Room.Terrain(roomName);
-        for(let x = center.x-2; x < center.x+2; x++){
-            for(let y = center.y-2; y < center.y+2; y++){
+        new RoomVisual(roomName).circle(center, {fill: 'yellow'});
+        for(let x = center.x-2; x <= center.x+2; x++){
+            for(let y = center.y-2; y <= center.y+2; y++){
                 if(terrain.get(x,y) === TERRAIN_MASK_WALL || terrain.get(x,y) === TERRAIN_MASK_LAVA){
                     new RoomVisual(roomName).circle(x,y, {fill: 'red'});
                 }else{
