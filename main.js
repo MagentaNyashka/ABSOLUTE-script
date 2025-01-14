@@ -380,13 +380,27 @@ const ROAD_BLOCK = [
     { x: -1, y: 1, structure: STRUCTURE_ROAD },
 ]
 
+const MAIN_BLOCK = [
+    { x: 0, y: 0, structure: STRUCTURE_ROAD },
+    { x: -1, y: -1, structure: STRUCTURE_SPAWN },
+    { x: -1, y: 1, structure: STRUCTURE_SPAWN },
+    { x: 1, y: 1, structure: STRUCTURE_SPAWN },
+    { x: -1, y: 0, structure: STRUCTURE_LINK },
+    { x: 0, y: -1, structure: STRUCTURE_STORAGE },
+    { x: 0, y: 1, structure: STRUCTURE_TERMINAL },
+    { x: 1, y: 0, structure: STRUCTURE_NUKER }
+]
+
+
 const BLOCK_TYPES = [
     EXT_BLOCK,
     SPAWN_BLOCK,
     LINK_BLOCK,
     CORE_BLOCK,
-    ROAD_BLOCK
+    ROAD_BLOCK,
+    MAIN_BLOCK
 ]
+
 
 function placeBlock(roomName, origin, block) {
     const actualBlock = block.concat(ROAD_BLOCK);
@@ -2252,6 +2266,7 @@ module.exports.loop = function() {
     // placeBlock('E2N24', {x: 40, y:22}, EXT_BLOCK);
     // placeBlock('E2N24', {x: 38, y:24}, CORE_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, LINK_BLOCK);
+    placeBlock('E2N24', {x: 38, y:20}, MAIN_BLOCK);
     // console.log(getRoomPriorityBySourceCount());
     // if(Game.shard.name === 'shard2'){console.log(Math.min(global.getFreeSources('E1N29', global.getSources('E1N29')[0].id).length,2));}   
     // console.log(findClosestHighwayRoom('E1N24'));
