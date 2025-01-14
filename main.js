@@ -28,7 +28,7 @@ const roleRemoteClaimer = require('./role.claimRoom');
 //NOTES FOR FUTURE
 /*
 [+]Make request system for terminals
-[-]Update request systen for terminals
+[+-]Update request systen for terminals
 [-]Move creeps info(max per role and BPs) to global
 [-]Optimize Memory usage:
     - Make room properties like:
@@ -36,8 +36,8 @@ const roleRemoteClaimer = require('./role.claimRoom');
         - Memory.roomProperties[roomName].labProtocol
         - Memory.roomProperties[roomName].useBoosts[RESOURCE...]
         - Memory.roomProperties[roomName].isAttacking = true
-
-
+[-]Create auto-building algorithm
+[-]Refactor spawn behavior
 request{
     roomName: 'E1N24',
     resourceType: 'L',
