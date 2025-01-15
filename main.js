@@ -540,12 +540,7 @@ global.findPlaceForMainCenter = function(roomName){
                 let tempCenter = adjustCenter(center, direction);
                 if(centers.includes(tempCenter)){return;}
                 freeBlocks = countFreeBlocks(tempCenter);
-                if(freeBlocks == 25){
-                    return tempCenter;
-                }else{
-                    blockStats[direction] = freeBlocks;
-                    // console.log(blockStats[direction]);
-                }
+                blockStats[direction] = freeBlocks;
             });
             let dDir = blockStats.indexOf(Math.max(...blockStats));
             console.log(blockStats, dDir);
