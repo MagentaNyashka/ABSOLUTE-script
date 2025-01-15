@@ -532,7 +532,7 @@ global.findPlaceForMainCenter = function(roomName){
     let centers = [];
     do {
         console.log(center.x, center.y);
-        centers.push(center);
+        // centers.push(center);
         freeBlocks = countFreeBlocks(center);
         console.log(freeBlocks);
         if (freeBlocks < 25) {
@@ -540,6 +540,7 @@ global.findPlaceForMainCenter = function(roomName){
             _.forEach(DIRECTION, function(direction){
                 let tempCenter = adjustCenter(center, direction);
                 if(centers.includes(tempCenter)){return;}
+                centers.push(tempCenter);
                 freeBlocks = countFreeBlocks(tempCenter);
                 blockStats[direction] = freeBlocks;
             });
