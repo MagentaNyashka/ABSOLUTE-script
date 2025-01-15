@@ -532,7 +532,6 @@ global.findPlaceForMainCenter = function(roomName){
     }
     let centers = [];
     do {
-        console.log(center.x, center.y);
         centers.push(center);
         freeBlocks = countFreeBlocks(center);
         // console.log(freeBlocks);
@@ -546,7 +545,6 @@ global.findPlaceForMainCenter = function(roomName){
                 console.log(tempCenter.x,tempCenter.y);
                 if(centers.some(c => c.x === tempCenter.x && c.y === tempCenter.y)){
                     console.log("already checked");
-                    return;
                 }
                 centers.push(tempCenter);
                 freeBlocks = countFreeBlocks(tempCenter);
