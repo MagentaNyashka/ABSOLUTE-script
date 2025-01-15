@@ -530,6 +530,7 @@ global.findPlaceForMainCenter = function(roomName){
         return freeBlocks;
     }
     do {
+        console.log(center.x, center.y);
         freeBlocks = countFreeBlocks(center);
         if (freeBlocks < 25) {
             let blockStats = [];
