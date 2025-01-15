@@ -493,26 +493,30 @@ function getPointsFromCenter(center, delta) {
 }
 
 global.findPlaceForMainCenter = function(roomName){
-    let center = { x: 7, y: 34, roomName: roomName }; // Starting center position
+    // let center = findCenter(roomName);
+    let center = { x: 7, y: 34, roomName: roomName };
     const terrain = new Room.Terrain(roomName);
     let freeBlocks = 25;
 
     // Function to adjust the center position slightly
-    function adjustCenter(center) {
+    const DIRECTION = {UP: 0, LEFT: 1, RIGHT: 2, DOWN: 3};
+
+    function adjustCenter(center, dir) {
         const directions = [
+            { dx: 0, dy: -1 }, // Up
             { dx: -1, dy: 0 }, // Left
             { dx: 1, dy: 0 },  // Right
-            { dx: 0, dy: -1 }, // Up
             { dx: 0, dy: 1 },  // Down
         ];
-        const randomDir = directions[Math.floor(Math.random() * directions.length)];
-        center.x += randomDir.dx;
-        center.y += randomDir.dy;
+        // const randomDir = directions[Math.floor(Math.random() * directions.length)];
+        const dir = directions(dir);
+        center.x += dir.dx;
+        center.y += dir.dy;
         return center;
     }
 
-    do {
-        freeBlocks = 25;
+    function countFreeBlocks(center){
+        let freeBlocks = 25;
 
         for (let x = center.x - 2; x <= center.x + 2; x++) {
             for (let y = center.y - 2; y <= center.y + 2; y++) {
@@ -523,9 +527,24 @@ global.findPlaceForMainCenter = function(roomName){
             }
         }
 
-
+        return freeBlocks;
+    }
+    do {
+        freeBlocks = countFreeBlocks(center);
         if (freeBlocks < 25) {
-            center = adjustCenter(center); // Adjust the center position
+            let blockStats = [];
+            _.forEach(DIRECTION, function(dir){
+                let tempCenter = adjustCenter(center, dir);
+                freeBlocks = countFreeBlocks(tempCenter);
+                if(freeBlocks = 25){
+                    return tempCenter;
+                }else{
+                    blockStats[dir]= freeBlocks;
+                }
+            });
+            let dir = blockStats.indexOf(Math.max(...blockStats));
+
+            center = adjustCenter(center, dir);
         }
     } while (freeBlocks < 25);
     new RoomVisual(roomName).text(freeBlocks, center);
@@ -2332,7 +2351,7 @@ module.exports.loop = function() {
     // placeBlock('E2N24', {x: 38, y:24}, CORE_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, LINK_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, MAIN_BLOCK);
-    // global.findPlaceForMainCenter('E7N31');
+    global.findPlaceForMainCenter('E7N31');
     // console.log(getRoomPriorityBySourceCount());
     // if(Game.shard.name === 'shard2'){console.log(Math.min(global.getFreeSources('E1N29', global.getSources('E1N29')[0].id).length,2));}   
     // console.log(findClosestHighwayRoom('E1N24'));
