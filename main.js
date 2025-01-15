@@ -497,7 +497,7 @@ global.findPlaceForMainCenter = function (roomName) {
         return;
     }
     
-    let center = { x: 7, y: 34, roomName: roomName }; // Initial center
+    let center = findCenter(roomName); // Initial center
     const terrain = new Room.Terrain(roomName);
     const DIRECTION = { UP: 0, LEFT: 1, RIGHT: 2, DOWN: 3 }; // Enum for directions
 
@@ -2368,7 +2368,7 @@ module.exports.loop = function() {
     // placeBlock('E2N24', {x: 38, y:24}, CORE_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, LINK_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, MAIN_BLOCK);
-    global.findPlaceForMainCenter('E7N31');
+    // global.findPlaceForMainCenter('E7N31');
     // console.log(getRoomPriorityBySourceCount());
     // if(Game.shard.name === 'shard2'){console.log(Math.min(global.getFreeSources('E1N29', global.getSources('E1N29')[0].id).length,2));}   
     // console.log(findClosestHighwayRoom('E1N24'));
