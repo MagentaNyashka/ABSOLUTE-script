@@ -81,7 +81,7 @@ function relistOldOrders() {
             );
 
             const orderIndex = otherOrders.findIndex(o => o.id === order.id);
-            console.log(orderIndex);
+            // console.log(orderIndex);
             if (orderIndex > 5) {
                 Game.market.cancelOrder(order.id);
 
@@ -268,6 +268,25 @@ const STRUCTURE_TYPES = [
     STRUCTURE_INVADER_CORE,
 ];
 
+const CONTROLLER_STRUCTURES = {
+    "spawn": {0: 0, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 2, 8: 3},
+    "extension": {0: 0, 1: 0, 2: 5, 3: 10, 4: 20, 5: 30, 6: 40, 7: 50, 8: 60},
+    "link": {1: 0, 2: 0, 3: 0, 4: 0, 5: 2, 6: 3, 7: 4, 8: 6},
+    "road": {0: 2500, 1: 2500, 2: 2500, 3: 2500, 4: 2500, 5: 2500, 6: 2500, 7: 2500, 8: 2500},
+    "constructedWall": {1: 0, 2: 2500, 3: 2500, 4: 2500, 5: 2500, 6: 2500, 7: 2500, 8: 2500},
+    "rampart": {1: 0, 2: 2500, 3: 2500, 4: 2500, 5: 2500, 6: 2500, 7: 2500, 8: 2500},
+    "storage": {1: 0, 2: 0, 3: 0, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1},
+    "tower": {1: 0, 2: 0, 3: 1, 4: 1, 5: 2, 6: 2, 7: 3, 8: 6},
+    "observer": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1},
+    "powerSpawn": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1},
+    "extractor": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1, 7: 1, 8: 1},
+    "terminal": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1, 7: 1, 8: 1},
+    "lab": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 3, 7: 6, 8: 10},
+    "container": {0: 5, 1: 5, 2: 5, 3: 5, 4: 5, 5: 5, 6: 5, 7: 5, 8: 5},
+    "nuker": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1},
+    "factory": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 1, 8: 1}
+};
+
 function totalRemoteSources(){
     let totalSources = 0;
     _.forEach(Memory.remoteRooms, function(remoteRoom){
@@ -419,7 +438,7 @@ function placeBlock(roomName, origin, block) {
 function findCenter(roomName) {
     const room = Game.rooms[roomName];
     if (!room) {
-        console.log(`Room ${roomName} not visible.`);
+        // console.log(`Room ${roomName} not visible.`);
         return null;
     }
 
@@ -473,24 +492,48 @@ function getPointsFromCenter(center, delta) {
     return points;
 }
 
-function findPlaceForMainCenter(roomName){
-    // const center = findCenter(roomName);
-    const center = {x: 7, y:37, roomName:roomName};
-    console.log(center);
-    if(center != null){
-        const terrain = new Room.Terrain(roomName);
-        new RoomVisual(roomName).circle(center, {fill: 'yellow'});
-        for(let x = center.x-2; x <= center.x+2; x++){
-            for(let y = center.y-2; y <= center.y+2; y++){
-                if(terrain.get(x,y) === TERRAIN_MASK_WALL || terrain.get(x,y) === TERRAIN_MASK_LAVA){
-                    new RoomVisual(roomName).circle(x,y, {fill: 'red'});
-                }else{
-                    new RoomVisual(roomName).circle(x,y, {fill: 'green'});
+global.findPlaceForMainCenter = function(roomName){
+    let center = { x: 7, y: 34, roomName: roomName }; // Starting center position
+    const terrain = new Room.Terrain(roomName);
+    let freeBlocks = 25;
+
+    // Function to adjust the center position slightly
+    function adjustCenter(center) {
+        const directions = [
+            { dx: -1, dy: 0 }, // Left
+            { dx: 1, dy: 0 },  // Right
+            { dx: 0, dy: -1 }, // Up
+            { dx: 0, dy: 1 },  // Down
+        ];
+        const randomDir = directions[Math.floor(Math.random() * directions.length)];
+        center.x += randomDir.dx;
+        center.y += randomDir.dy;
+        return center;
+    }
+
+    do {
+        freeBlocks = 25;
+
+        for (let x = center.x - 2; x <= center.x + 2; x++) {
+            for (let y = center.y - 2; y <= center.y + 2; y++) {
+                if (terrain.get(x, y) === TERRAIN_MASK_WALL || terrain.get(x, y) === TERRAIN_MASK_LAVA) {
+                    freeBlocks--;
+                } else {
                 }
             }
         }
-    }
+
+
+        if (freeBlocks < 25) {
+            center = adjustCenter(center); // Adjust the center position
+        }
+    } while (freeBlocks < 25);
+    new RoomVisual(roomName).text(freeBlocks, center);
+
+    console.log(`Found suitable center: (${center.x}, ${center.y}) in room ${roomName}`);
+    return center;
 }
+
 
 const renderTerrain = false;
 
@@ -523,7 +566,7 @@ function terrainAnalyze(roomName){
         new RoomVisual(center.roomName).circle(center, { radius: 0.5, fill: 'yellow' });
 
         const pivots = getPointsFromCenter(center, 4);
-        console.log(pivots);
+        // console.log(pivots);
         _.forEach(pivots, function(pivot){
             new RoomVisual(pivot.roomName).circle(pivot, { radius: 0.5, fill: 'green' });
         });
@@ -2015,7 +2058,7 @@ function getRoomPriorityBySourceCount(){
 function readCreepRolesFromIntershardMemory(shard) {
     const intershardData = InterShardMemory.getRemote(shard);
     if (!intershardData) {
-        console.log("No data in Intershard Memory.");
+        // console.log("No data in Intershard Memory.");
         return {};
     }
 
@@ -2283,12 +2326,13 @@ module.exports.loop = function() {
     dark_mode();
     // cancelInacativeOrders();
     relistOldOrders();
+    // console.log(CONTROLLER_STRUCTURES['spawn'][7]);
     // terrainAnalyze('E2N24');
     // placeBlock('E2N24', {x: 40, y:22}, EXT_BLOCK);
     // placeBlock('E2N24', {x: 38, y:24}, CORE_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, LINK_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, MAIN_BLOCK);
-    // findPlaceForMainCenter('E2N24');
+    // global.findPlaceForMainCenter('E7N31');
     // console.log(getRoomPriorityBySourceCount());
     // if(Game.shard.name === 'shard2'){console.log(Math.min(global.getFreeSources('E1N29', global.getSources('E1N29')[0].id).length,2));}   
     // console.log(findClosestHighwayRoom('E1N24'));
