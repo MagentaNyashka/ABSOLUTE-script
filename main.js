@@ -545,8 +545,9 @@ global.findPlaceForMainCenter = function(roomName){
                 }
             });
             let dDir = blockStats.indexOf(Math.max(...blockStats));
-
-            center = adjustCenter(center, dDir);
+            if(dDir != -1){
+                center = adjustCenter(center, dDir);
+            }
         }
     } while (freeBlocks < 25);
     new RoomVisual(roomName).text(freeBlocks, center);
