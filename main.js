@@ -534,6 +534,7 @@ global.findPlaceForMainCenter = function(roomName){
         console.log(center.x, center.y);
         centers.push(center);
         freeBlocks = countFreeBlocks(center);
+        console.log(freeBlocks);
         if (freeBlocks < 25) {
             let blockStats = [];
             _.forEach(DIRECTION, function(direction){
@@ -543,7 +544,6 @@ global.findPlaceForMainCenter = function(roomName){
                 blockStats[direction] = freeBlocks;
             });
             let dDir = blockStats.indexOf(Math.max(...blockStats));
-            console.log(blockStats, dDir);
             if(dDir != -1){
                 center = adjustCenter(center, dDir);
             }
