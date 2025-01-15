@@ -544,7 +544,7 @@ global.findPlaceForMainCenter = function(roomName){
             _.forEach(DIRECTION, function(direction){
                 let tempCenter = adjustCenter(center, direction);
                 console.log(tempCenter.x,tempCenter.y);
-                if(centers.includes(tempCenter)){
+                if(centers.some(c => c.x === tempCenter.x && c.y === tempCenter.y)){
                     console.log("already checked");
                     return;
                 }
