@@ -544,6 +544,7 @@ global.findPlaceForMainCenter = function(roomName){
                 blockStats[direction] = freeBlocks;
             });
             let dDir = blockStats.indexOf(Math.max(...blockStats));
+            console.log(blockStats, dDir);
             if(dDir != -1){
                 center = adjustCenter(center, dDir);
             }
