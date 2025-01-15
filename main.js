@@ -539,7 +539,7 @@ global.findPlaceForMainCenter = function(roomName){
                 if(freeBlocks = 25){
                     return tempCenter;
                 }else{
-                    blockStats[direction]= freeBlocks;
+                    blockStats.push({direction, freeBlocks});
                 }
             });
             console.log(blockStats);
