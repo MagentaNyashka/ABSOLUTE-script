@@ -533,18 +533,18 @@ global.findPlaceForMainCenter = function(roomName){
         freeBlocks = countFreeBlocks(center);
         if (freeBlocks < 25) {
             let blockStats = [];
-            _.forEach(DIRECTION, function(dir){
-                let tempCenter = adjustCenter(center, dir);
+            _.forEach(DIRECTION, function(direction){
+                let tempCenter = adjustCenter(center, direction);
                 freeBlocks = countFreeBlocks(tempCenter);
                 if(freeBlocks = 25){
                     return tempCenter;
                 }else{
-                    blockStats[dir]= freeBlocks;
+                    blockStats[direction]= freeBlocks;
                 }
             });
-            let dir = blockStats.indexOf(Math.max(...blockStats));
+            let dDir = blockStats.indexOf(Math.max(...blockStats));
 
-            center = adjustCenter(center, dir);
+            center = adjustCenter(center, dDir);
         }
     } while (freeBlocks < 25);
     new RoomVisual(roomName).text(freeBlocks, center);
