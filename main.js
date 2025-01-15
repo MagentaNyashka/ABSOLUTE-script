@@ -497,6 +497,7 @@ global.findPlaceForMainCenter = function(roomName){
     let center = { x: 7, y: 34, roomName: roomName };
     const terrain = new Room.Terrain(roomName);
     let freeBlocks = 25;
+    let lastDir = -1;
 
     // Function to adjust the center position slightly
     const DIRECTION = {UP: 0, LEFT: 1, RIGHT: 2, DOWN: 3};
@@ -535,6 +536,9 @@ global.findPlaceForMainCenter = function(roomName){
         if (freeBlocks < 25) {
             let blockStats = [];
             _.forEach(DIRECTION, function(direction){
+                if(direction == lastDir){
+                    return;
+                }
                 let tempCenter = adjustCenter(center, direction);
                 freeBlocks = countFreeBlocks(tempCenter);
                 if(freeBlocks == 25){
@@ -549,6 +553,7 @@ global.findPlaceForMainCenter = function(roomName){
             if(dDir != -1){
                 center = adjustCenter(center, dDir);
             }
+            lastDir = dDir;
         }
     } while (freeBlocks < 25);
     new RoomVisual(roomName).text(freeBlocks, center);
