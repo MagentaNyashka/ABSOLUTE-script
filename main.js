@@ -493,6 +493,7 @@ function getPointsFromCenter(center, delta) {
 }
 
 global.findPlaceForMainCenter = function(roomName){
+    if(Game.time % 5 != 0){return;}
     // let center = findCenter(roomName);
     let center = { x: 7, y: 34, roomName: roomName };
     const terrain = new Room.Terrain(roomName);
