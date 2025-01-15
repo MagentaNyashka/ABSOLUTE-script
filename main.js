@@ -509,6 +509,7 @@ global.findPlaceForMainCenter = function(roomName){
             { dx: 0, dy: 1 },  // Down
         ];
         // const randomDir = directions[Math.floor(Math.random() * directions.length)];
+        console.log(direction);
         const dir = directions[direction];
         console.log(dir);
         center.x += dir.dx;
