@@ -501,7 +501,7 @@ global.findPlaceForMainCenter = function(roomName){
     // Function to adjust the center position slightly
     const DIRECTION = {UP: 0, LEFT: 1, RIGHT: 2, DOWN: 3};
 
-    function adjustCenter(center, dir) {
+    function adjustCenter(center, direction) {
         const directions = [
             { dx: 0, dy: -1 }, // Up
             { dx: -1, dy: 0 }, // Left
@@ -509,7 +509,7 @@ global.findPlaceForMainCenter = function(roomName){
             { dx: 0, dy: 1 },  // Down
         ];
         // const randomDir = directions[Math.floor(Math.random() * directions.length)];
-        const dir = directions(dir);
+        const dir = directions(direction);
         center.x += dir.dx;
         center.y += dir.dy;
         return center;
