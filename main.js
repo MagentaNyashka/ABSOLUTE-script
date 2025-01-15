@@ -492,16 +492,16 @@ function getPointsFromCenter(center, delta) {
     return points;
 }
 
-global.findPlaceForMainCenter = function(roomName){
-    if(Game.time % 5 != 0){return;}
-    // let center = findCenter(roomName);
-    let center = { x: 7, y: 34, roomName: roomName };
+global.findPlaceForMainCenter = function (roomName) {
+    if (Game.time % 5 != 0) {
+        return;
+    }
+    
+    let center = { x: 7, y: 34, roomName: roomName }; // Initial center
     const terrain = new Room.Terrain(roomName);
-    let freeBlocks = 25;
+    const DIRECTION = { UP: 0, LEFT: 1, RIGHT: 2, DOWN: 3 }; // Enum for directions
 
-    // Function to adjust the center position slightly
-    const DIRECTION = {UP: 0, LEFT: 1, RIGHT: 2, DOWN: 3};
-
+    // Function to adjust the center position based on direction
     function adjustCenter(center, direction) {
         const directions = [
             { dx: 0, dy: -1 }, // Up
@@ -509,59 +509,66 @@ global.findPlaceForMainCenter = function(roomName){
             { dx: 1, dy: 0 },  // Right
             { dx: 0, dy: 1 },  // Down
         ];
-        // const randomDir = directions[Math.floor(Math.random() * directions.length)];
         const dir = directions[direction];
-        center.x += dir.dx;
-        center.y += dir.dy;
-        return center;
+        return { x: center.x + dir.dx, y: center.y + dir.dy, roomName: center.roomName };
     }
 
-    function countFreeBlocks(center){
+    // Function to count free blocks in a 5x5 area around the center
+    function countFreeBlocks(center) {
         let freeBlocks = 25;
-
         for (let x = center.x - 2; x <= center.x + 2; x++) {
             for (let y = center.y - 2; y <= center.y + 2; y++) {
                 if (terrain.get(x, y) === TERRAIN_MASK_WALL || terrain.get(x, y) === TERRAIN_MASK_LAVA) {
                     freeBlocks--;
-                } else {
                 }
             }
         }
-
         return freeBlocks;
     }
-    let centers = [];
+
+    let checkedCenters = []; // List of already checked centers
+    checkedCenters.push(center);
+
+    let freeBlocks = countFreeBlocks(center); // Initial free block count
+
     do {
-        centers.push(center);
-        freeBlocks = countFreeBlocks(center);
-        // console.log(freeBlocks);
-        _.forEach(centers, function(c){
-            console.log("C",c.x, c.y);
-        });
         if (freeBlocks < 25) {
-            let blockStats = [];
-            _.forEach(DIRECTION, function(direction){
-                let tempCenter = adjustCenter(center, direction);
-                console.log(tempCenter.x,tempCenter.y);
-                if(centers.some(c => c.x === tempCenter.x && c.y === tempCenter.y)){
-                    console.log("already checked");
+            let blockStats = Array(4).fill(-1); // Initialize block stats for directions
+            
+            // Check free block count for each direction
+            _.forEach(DIRECTION, function (dirValue) {
+                let tempCenter = adjustCenter(center, dirValue);
+
+                // Skip already-checked centers
+                if (checkedCenters.some(c => c.x === tempCenter.x && c.y === tempCenter.y)) {
+                    return;
                 }
-                centers.push(tempCenter);
-                freeBlocks = countFreeBlocks(tempCenter);
-                blockStats[direction] = freeBlocks;
+
+                // Count free blocks at the new position
+                let tempFreeBlocks = countFreeBlocks(tempCenter);
+                blockStats[dirValue] = tempFreeBlocks;
+
+                // Store the new center to avoid revisiting
+                checkedCenters.push(tempCenter);
             });
-            let dDir = blockStats.indexOf(Math.max(...blockStats));
-            // console.log(blockStats, dDir);
-            if(dDir != -1){
-                center = adjustCenter(center, dDir);
+
+            // Find the direction with the highest free block count
+            let bestDirection = blockStats.indexOf(Math.max(...blockStats));
+            
+            // If a valid direction is found, move the center
+            if (bestDirection !== -1) {
+                center = adjustCenter(center, bestDirection);
+                freeBlocks = countFreeBlocks(center);
             }
         }
     } while (freeBlocks < 25);
-    new RoomVisual(roomName).text(freeBlocks, center);
 
+    // Mark the final center visually
+    new RoomVisual(roomName).circle(center.x, center.y, { fill: 'yellow', radius: 0.5 });
     console.log(`Found suitable center: (${center.x}, ${center.y}) in room ${roomName}`);
     return center;
-}
+};
+
 
 
 const renderTerrain = false;
