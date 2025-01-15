@@ -497,7 +497,6 @@ global.findPlaceForMainCenter = function(roomName){
     let center = { x: 7, y: 34, roomName: roomName };
     const terrain = new Room.Terrain(roomName);
     let freeBlocks = 25;
-    let lastDir = -1;
 
     // Function to adjust the center position slightly
     const DIRECTION = {UP: 0, LEFT: 1, RIGHT: 2, DOWN: 3};
@@ -530,16 +529,16 @@ global.findPlaceForMainCenter = function(roomName){
 
         return freeBlocks;
     }
+    let centers = [];
     do {
         console.log(center.x, center.y);
+        centers.push(center);
         freeBlocks = countFreeBlocks(center);
         if (freeBlocks < 25) {
             let blockStats = [];
             _.forEach(DIRECTION, function(direction){
-                if(direction == lastDir){
-                    return;
-                }
                 let tempCenter = adjustCenter(center, direction);
+                if(centers.includes(tempCenter)){return;}
                 freeBlocks = countFreeBlocks(tempCenter);
                 if(freeBlocks == 25){
                     return tempCenter;
@@ -553,7 +552,6 @@ global.findPlaceForMainCenter = function(roomName){
             if(dDir != -1){
                 center = adjustCenter(center, dDir);
             }
-            lastDir = dDir;
         }
     } while (freeBlocks < 25);
     new RoomVisual(roomName).text(freeBlocks, center);
@@ -2360,7 +2358,7 @@ module.exports.loop = function() {
     // placeBlock('E2N24', {x: 38, y:24}, CORE_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, LINK_BLOCK);
     // placeBlock('E2N24', {x: 38, y:20}, MAIN_BLOCK);
-    // global.findPlaceForMainCenter('E7N31');
+    global.findPlaceForMainCenter('E7N31');
     // console.log(getRoomPriorityBySourceCount());
     // if(Game.shard.name === 'shard2'){console.log(Math.min(global.getFreeSources('E1N29', global.getSources('E1N29')[0].id).length,2));}   
     // console.log(findClosestHighwayRoom('E1N24'));
