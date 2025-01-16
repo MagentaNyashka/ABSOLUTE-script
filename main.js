@@ -20,8 +20,9 @@ const roleScout = require('role.scout');
 const roleRemoteMiner = require('role.remoteMiner');
 const roleClaimRoom = require('./role.claimRoom');
 const roleRemoteClaimer = require('./role.claimRoom');
+const { BehaviorTree, Sequence, Task, SUCCESS, FAILURE } = require('BehaviorTree');
 
-
+// console.log(SUCCESS);
 
 
 
