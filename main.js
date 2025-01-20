@@ -2723,22 +2723,22 @@ module.exports.loop = function() {
             if((centers.length-reserve_centers.length) < maxCenters && testIfCanSpawnC == 0
                 //  && testIfCanSpawn == 0
             ){
-                var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                var newCenterName = 'C_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                 status = room_spawn.spawnCreep(CenterBP, newCenterName,
                 {memory: {role: 'center'}});
             }else if(testIfCanSpawnC == -6 && centers.length == 0){
-                var newCenterName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                var newCenterName = 'C_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                 status = room_spawn.spawnCreep([CARRY,CARRY,CARRY,CARRY,MOVE,MOVE], newCenterName,
                 {memory: {role: 'center'}});
             }
             if((harvesters.length-reserve_harvesters.length) < maxHarvesters){
                 if(testIfCanSpawn == 0 && centers.length > 0){
-                    var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                    var newHarvesterName = 'H_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                     status = room_spawn.spawnCreep(Harvester_BP, newHarvesterName,
                         {memory: {role: 'harvester'}});
                 }else if (reserve_harvesters.length == 0){
                 // if(testIfCanSpawn == -6 && centers.length == 0){
-                    var newHarvesterName = 'H_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                    var newHarvesterName = 'H_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                     status = room_spawn.spawnCreep([WORK,CARRY,MOVE], newHarvesterName,
                         {memory: {role: 'harvester'}});
                 }
@@ -2746,44 +2746,44 @@ module.exports.loop = function() {
             if(harvesters.length-reserve_harvesters.length == maxHarvesters && centers.length >= maxCenters && testIfCanSpawn == 0 && testIfCanSpawnC == 0){
                 if(upgraders.length >= maxUpgraders){
                     if(harvester_upgr.length < maxHarvestersUpgr) {
-                        var newHarvesterUpgrName = 'HU_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                        var newHarvesterUpgrName = 'HU_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(HarvesterUpgr_BP, newHarvesterUpgrName,
                             {memory: {role: 'harvester_upgr'}});
                     }
 
-                    if(builders.length < maxBuilders && global.getConstructionSites(room_spawn.room.name).length > 0){
-                        var newBuilderName = 'B_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                    if(builders.length < maxBuilders && global.getConstructionSites(roomName).length > 0){
+                        var newBuilderName = 'B_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(Builder_BP, newBuilderName,
                             {memory: {role: 'builder'}});
                     }
 
                     if(transfers.length < maxTransferers){
-                        var newTransferName = 'T_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                        var newTransferName = 'T_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
                             {memory: {role: 'transfer'}});
                     }
 
                     if(miners.length < maxMiners &&  global.getCachedStructures(roomName, STRUCTURE_EXTRACTOR).length > 0){
-                        var newMinerName = 'M_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                        var newMinerName = 'M_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(Miner_BP, newMinerName,
                             {memory: {role: 'miner'}});
                     }
 
                     if(maintainers.length < maxMaintenancers){
-                        var newMaintainerName = 'R_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                        var newMaintainerName = 'R_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(Maintenancer_BP, newMaintainerName,
                             {memory: {role: 'maintainer'}});
                     }
 
                     if(Memory.ClaimingRooms.includes(roomName)){
                         if(claimers.length < maxClaimers){
-                            var newClaimerName = 'C_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                            var newClaimerName = 'C_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                             status = room_spawn.spawnCreep(Claimer_BP, newClaimerName,
                                 {memory: {role: 'claimer'}});
                         }
 
                         if(builders_m.length < maxBuildersM){
-                            var newBuilderMName = 'BM_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                            var newBuilderMName = 'BM_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                             status = room_spawn.spawnCreep(Builder_M_BP, newBuilderMName,
                                 {memory: {role: 'builder_m'}});
                         }
@@ -2795,7 +2795,7 @@ module.exports.loop = function() {
                         // }
                     }
                 }else{
-                    var newUpgraderName = 'U_2.0_' + Game.time + "_" + room_spawn.room + "_" + room_level;
+                    var newUpgraderName = 'U_2.7_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(Ugrader_BP, newUpgraderName,
                             {memory: {role: 'upgrader'}});
                 }
