@@ -49,10 +49,10 @@ var roleBuilder = {
                             .concat(global.getDestLinks(roomName) || []);
                             // .filter(structure => structure.store[RESOURCE_ENERGY] > 0);
                         if (energyStructures.length > 0) {
-                            creep.memory.target = creep.pos.findClosestByPath(energyStructures).id;
+                            creep.memory.target = creep.pos.findClosestByRange(energyStructures).id;
                         } else {
                             const sources = global.getSources(roomName);
-                            const target = creep.pos.findClosestByPath(sources);
+                            const target = creep.pos.findClosestByRange(sources);
                             if (target) {
                                 creep.memory.target = target.id;
                             }

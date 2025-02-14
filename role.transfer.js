@@ -73,22 +73,55 @@ var roleTransfer = {
                         break;
                     case Memory.labProtocol[roomName][1]:
                         if(sLabs.length >= 2){
-                            const lab1 = sLabs[1];
-                            if(lab1.store[Memory.labProtocol[roomName][0]] < 1000){
-                                creep.memory.target = lab1.id;
-                            }else{
-                                const terminal = Game.rooms[roomName].terminal;
-                                if(terminal && terminal.store.getFreeCapacity() > 1000){
-                                    creep.memory.target = terminal.id;
-                                    creep.memory.resource = global.getMinerals(roomName)[0].mineralType;
+                            if(sLabs.length >= 2){
+                                const lab1 = sLabs[1];
+                                if(lab1.store[Memory.labProtocol[roomName][1]] < 1000){
+                                    creep.memory.target = lab1.id;
                                 }else{
-                                    const storage = Game.rooms[roomName].storage;
-                                    if(storage && storage.store.getFreeCapacity() > 1000){
-                                        creep.memory.target = storage.id;
+                                    const terminal = Game.rooms[roomName].terminal;
+                                    if(terminal && terminal.store.getFreeCapacity() > 1000){
+                                        creep.memory.target = terminal.id;
                                         creep.memory.resource = global.getMinerals(roomName)[0].mineralType;
+                                    }else{
+                                        const storage = Game.rooms[roomName].storage;
+                                        if(storage && storage.store.getFreeCapacity() > 1000){
+                                            creep.memory.target = storage.id;
+                                            creep.memory.resource = global.getMinerals(roomName)[0].mineralType;
+                                        }
                                     }
                                 }
-                            }
+                                }else{
+                                    const terminal = Game.rooms[roomName].terminal;
+                                    if(terminal && terminal.store.getFreeCapacity() > 1000){
+                                        creep.memory.target = terminal.id;
+                                        creep.memory.resource = global.getMinerals(roomName)[0].mineralType;
+                                    }else{
+                                        const storage = Game.rooms[roomName].storage;
+                                        if(storage && storage.store.getFreeCapacity() > 1000){
+                                            creep.memory.target = storage.id;
+                                            creep.memory.resource = global.getMinerals(roomName)[0].mineralType;
+                                        }
+                                    }
+                                }
+                                creep.memory.resource = Memory.labProtocol[roomName][1];
+                                break;
+
+                            // const lab1 = sLabs[1];
+                            // if(lab1.store[Memory.labProtocol[roomName][0]] < 1000){
+                            //     creep.memory.target = lab1.id;
+                            // }else{
+                            //     const terminal = Game.rooms[roomName].terminal;
+                            //     if(terminal && terminal.store.getFreeCapacity() > 1000){
+                            //         creep.memory.target = terminal.id;
+                            //         creep.memory.resource = global.getMinerals(roomName)[0].mineralType;
+                            //     }else{
+                            //         const storage = Game.rooms[roomName].storage;
+                            //         if(storage && storage.store.getFreeCapacity() > 1000){
+                            //             creep.memory.target = storage.id;
+                            //             creep.memory.resource = global.getMinerals(roomName)[0].mineralType;
+                            //         }
+                            //     }
+                            // }
                         }else{
                             const terminal = Game.rooms[roomName].terminal;
                                 if(terminal && terminal.store.getFreeCapacity() > 1000){
@@ -133,7 +166,7 @@ var roleTransfer = {
             const targetStructure = Game.getObjectById(creep.memory.target);
             if (targetStructure) {
                 new RoomVisual(roomName).circle(targetStructure.pos.x+0.01,targetStructure.pos.y, {fill: 'transparent',stroke: '#ffff00', strokeWidth: 0.03, opacity: 1, radius: 0.15});
-                const status = creep.transfer(targetStructure, creep.memory.resource, creep.store[creep.memory.resource]);
+                const status = creep.transfer(targetStructure, creep.memory.resource, Math.min(creep.store[creep.memory.resource], targetStructure.store.getFreeCapacity(creep.memory.resource)));
                 if(status === ERR_NOT_IN_RANGE) {
                     creep.moveTo(targetStructure, {visualizePathStyle: {stroke: '#800080'}, reusePath: 10});
                 } else if(status === ERR_NOT_ENOUGH_RESOURCES){

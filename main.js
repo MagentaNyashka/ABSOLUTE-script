@@ -50,7 +50,7 @@ request{
 */
 
 function cancelInacativeOrders(){
-    if(Game.time % 1000 == 0){
+    if(Game.time % 100000 == 0){
         const orders = Game.market.orders;
         _.forEach(orders, function(order){
             if(!order.active){
@@ -70,7 +70,7 @@ function relistOldOrders() {
             const resourceType = order.resourceType;
             const orderType = order.type;
 
-            const otherOrders = Game.market.getAllOrders(o => 
+            const otherOrders = global.getMarketOrders(o => 
                 o.resourceType === resourceType && o.type === orderType
             );
 
@@ -622,7 +622,7 @@ function hashCode(str) {
 function trackAverageCPU() {
     const currentUsed = Game.cpu.getUsed();
 
-    if (!Memory.cpuStats) {
+    if (!Memory.cpuStats || Memory.cpuStats.ticks > 1000000) {
         Memory.cpuStats = { total: 0, ticks: 0, average: 0 };
     }
 
@@ -633,6 +633,25 @@ function trackAverageCPU() {
 
     return `${Memory.cpuStats.average.toFixed(2)}`;
 }
+
+function trackAverageGCL() {
+    const currentGCL = Game.gcl.progress;
+
+    if (!Memory.gclStats || Memory.gclStats.ticks > 1000000) {
+        Memory.gclStats = { total: 0, ticks: 0, average: 0, last: currentGCL };
+    }
+
+    const delta = currentGCL - Memory.gclStats.last;
+    Memory.gclStats.last = currentGCL;
+
+    Memory.gclStats.total += delta;
+    Memory.gclStats.ticks += 1;
+
+    Memory.gclStats.average = Memory.gclStats.total / Memory.gclStats.ticks;
+
+    return `${Memory.gclStats.average.toFixed(2)}`;
+}
+
 function getControllerProgressBar(controller, length = 20) {
     if (!controller) return "No Controller";
 
@@ -857,6 +876,7 @@ function render(){
         const roomCount = Object.values(Game.rooms).filter(room => room.controller && room.controller.my).length;
         const limit = Game.cpu.limit;
         const avgCpu = trackAverageCPU();
+        const avgGcl = trackAverageGCL();
         new RoomVisual().rect(35.7, -0.5, 13, 3.5, {fill: base_color, opacity: 0.5, stroke: stroke_color, strokeWidth: 0.1})
         .text('Time ' + Game.time, 36, 0.2, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
         .text('Cpu ' + Game.cpu.getUsed().toFixed(2), 36, 0.8, {align: 'left', color: text_color,stroke: stroke_color, strokeWidth:0.05, font: 0.5})
@@ -873,6 +893,7 @@ function render(){
             creeps: Object.keys(Game.creeps).length,
             gcl: Game.gcl.progress,
             gclTotal: Game.gcl.progressTotal,
+            gclAvg: parseFloat(avgGcl),
             credits: Game.market.credits
         }
         RawMemory.segments[1] = JSON.stringify(stringify);
@@ -982,6 +1003,7 @@ global.getConstructionSites = function(roomName){
     }
     return global.cache[roomName].constructionSites;
 }
+    
 
 function roomLinksCacher(roomName){
     if(Game.time % 500 === 0){
@@ -1315,6 +1337,18 @@ global.getAllStuctures = function(roomName){
     }
 
     return global.cache[roomName][ANY];
+};
+
+global.getMarketOrders = function(){
+    if(!global.cache){
+        global.cache = {};
+    }
+    if(!global.cache.marketOrders){
+        const orders = Game.market.getAllOrders();
+        global.cache.marketOrders = orders;
+    }
+
+    return global.cache.marketOrders;
 };
 
 global.getControllerContainers = function(roomName){
@@ -2361,7 +2395,7 @@ function runLabs(roomName){
 profiler.enable();
 module.exports.loop = function() {
     dark_mode();
-    // cancelInacativeOrders();
+    cancelInacativeOrders();
     relistOldOrders();
     // console.log(CONTROLLER_STRUCTURES['spawn'][7]);
     // terrainAnalyze('E2N24');
@@ -2723,22 +2757,22 @@ module.exports.loop = function() {
             if((centers.length-reserve_centers.length) < maxCenters && testIfCanSpawnC == 0
                 //  && testIfCanSpawn == 0
             ){
-                var newCenterName = 'C_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                var newCenterName = 'C_' + Game.time + "_" + roomName + "_" + room_level;
                 status = room_spawn.spawnCreep(CenterBP, newCenterName,
                 {memory: {role: 'center'}});
             }else if(testIfCanSpawnC == -6 && centers.length == 0){
-                var newCenterName = 'C_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                var newCenterName = 'C_' + Game.time + "_" + roomName + "_" + room_level;
                 status = room_spawn.spawnCreep([CARRY,CARRY,CARRY,CARRY,MOVE,MOVE], newCenterName,
                 {memory: {role: 'center'}});
             }
             if((harvesters.length-reserve_harvesters.length) < maxHarvesters){
                 if(testIfCanSpawn == 0 && centers.length > 0){
-                    var newHarvesterName = 'H_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                    var newHarvesterName = 'H_' + Game.time + "_" + roomName + "_" + room_level;
                     status = room_spawn.spawnCreep(Harvester_BP, newHarvesterName,
                         {memory: {role: 'harvester'}});
                 }else if (reserve_harvesters.length == 0){
                 // if(testIfCanSpawn == -6 && centers.length == 0){
-                    var newHarvesterName = 'H_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                    var newHarvesterName = 'H_' + Game.time + "_" + roomName + "_" + room_level;
                     status = room_spawn.spawnCreep([WORK,CARRY,MOVE], newHarvesterName,
                         {memory: {role: 'harvester'}});
                 }
@@ -2746,44 +2780,44 @@ module.exports.loop = function() {
             if(harvesters.length-reserve_harvesters.length == maxHarvesters && centers.length >= maxCenters && testIfCanSpawn == 0 && testIfCanSpawnC == 0){
                 if(upgraders.length >= maxUpgraders){
                     if(harvester_upgr.length < maxHarvestersUpgr) {
-                        var newHarvesterUpgrName = 'HU_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                        var newHarvesterUpgrName = 'HU_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(HarvesterUpgr_BP, newHarvesterUpgrName,
                             {memory: {role: 'harvester_upgr'}});
                     }
 
                     if(builders.length < maxBuilders && global.getConstructionSites(roomName).length > 0){
-                        var newBuilderName = 'B_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                        var newBuilderName = 'B_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(Builder_BP, newBuilderName,
                             {memory: {role: 'builder'}});
                     }
 
                     if(transfers.length < maxTransferers){
-                        var newTransferName = 'T_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                        var newTransferName = 'T_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(Trasnferer_BP, newTransferName,
                             {memory: {role: 'transfer'}});
                     }
 
                     if(miners.length < maxMiners &&  global.getCachedStructures(roomName, STRUCTURE_EXTRACTOR).length > 0){
-                        var newMinerName = 'M_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                        var newMinerName = 'M_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(Miner_BP, newMinerName,
                             {memory: {role: 'miner'}});
                     }
 
                     if(maintainers.length < maxMaintenancers){
-                        var newMaintainerName = 'R_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                        var newMaintainerName = 'R_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(Maintenancer_BP, newMaintainerName,
                             {memory: {role: 'maintainer'}});
                     }
 
                     if(Memory.ClaimingRooms.includes(roomName)){
                         if(claimers.length < maxClaimers){
-                            var newClaimerName = 'C_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                            var newClaimerName = 'C_' + Game.time + "_" + roomName + "_" + room_level;
                             status = room_spawn.spawnCreep(Claimer_BP, newClaimerName,
                                 {memory: {role: 'claimer'}});
                         }
 
                         if(builders_m.length < maxBuildersM){
-                            var newBuilderMName = 'BM_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                            var newBuilderMName = 'BM_' + Game.time + "_" + roomName + "_" + room_level;
                             status = room_spawn.spawnCreep(Builder_M_BP, newBuilderMName,
                                 {memory: {role: 'builder_m'}});
                         }
@@ -2795,7 +2829,7 @@ module.exports.loop = function() {
                         // }
                     }
                 }else{
-                    var newUpgraderName = 'U_2.7_' + Game.time + "_" + roomName + "_" + room_level;
+                    var newUpgraderName = 'U_' + Game.time + "_" + roomName + "_" + room_level;
                         status = room_spawn.spawnCreep(Ugrader_BP, newUpgraderName,
                             {memory: {role: 'upgrader'}});
                 }
@@ -2979,7 +3013,7 @@ module.exports.loop = function() {
                             }
                         }
                         if(orders.length == 0){
-                            var otherOrders = Game.market.getAllOrders(order => order.resourceType == RESOURCE &&
+                            var otherOrders = global.getMarketOrders(order => order.resourceType == RESOURCE &&
                             order.type == ORDER_SELL);
                             otherOrders.sort(function(a,b){return a.price - b.price;});
                         if(otherOrders.length > 0){
@@ -3000,7 +3034,7 @@ module.exports.loop = function() {
                         }
                     }
                     if(terminal.store[RESOURCE] > excludeCapacity/uniqueResources.length){
-                        var otherOrders = Game.market.getAllOrders(order => order.resourceType == RESOURCE &&
+                        var otherOrders = global.getMarketOrders(order => order.resourceType == RESOURCE &&
                         order.type == ORDER_BUY);
                         otherOrders.sort(function(a,b){return b.price - a.price;});
                         if(otherOrders.length > 0){
@@ -3020,7 +3054,7 @@ module.exports.loop = function() {
                     }
                 }
                 if(orders.length == 0){
-                    var otherOrders = Game.market.getAllOrders(order => order.resourceType == mineralType &&
+                    var otherOrders = global.getMarketOrders(order => order.resourceType == mineralType &&
                       order.type == ORDER_SELL);
                       otherOrders.sort(function(a,b){return a.price - b.price;});
                     if(otherOrders.length > 0){
@@ -3041,7 +3075,7 @@ module.exports.loop = function() {
                 }
             }
             if(terminal.store[mineralType] > 100000){
-                const otherOrders = Game.market.getAllOrders(order => order.resourceType == mineralType &&
+                const otherOrders = global.getMarketOrders(order => order.resourceType == mineralType &&
                     order.type == ORDER_BUY &&
                     Game.market.calcTransactionCost(order.amount, roomName, order.roomName) < terminal.store[RESOURCE_ENERGY] * 0.8);
                 if(otherOrders.length > 0){
@@ -3068,7 +3102,7 @@ module.exports.loop = function() {
                     }
                 }
                 if(orders.length == 0){
-                    var otherOrders = Game.market.getAllOrders(order => order.resourceType == RESOURCE_ENERGY &&
+                    var otherOrders = global.getMarketOrders(order => order.resourceType == RESOURCE_ENERGY &&
                       order.type == ORDER_SELL);
                       otherOrders.sort(function(a,b){return a.price - b.price;});
                     if(otherOrders.length > 0){
@@ -3102,7 +3136,7 @@ module.exports.loop = function() {
                         }
                     }
                     if(orders.length == 0){
-                        var otherOrders = Game.market.getAllOrders(order => order.resourceType == resourceType &&
+                        var otherOrders = global.getMarketOrders(order => order.resourceType == resourceType &&
                           order.type == ORDER_BUY);
                           otherOrders.sort(function(a,b){return b.price - a.price;});
                         if(otherOrders.length > 0){
