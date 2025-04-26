@@ -70,19 +70,17 @@ function relistOldOrders() {
             const resourceType = order.resourceType;
             const orderType = order.type;
 
-            const otherOrders = global.getMarketOrders(o => 
-                o.resourceType === resourceType && o.type === orderType
-            );
+            const otherOrders = Game.market.getAllOrders({type: orderType, resourceType: resourceType});
+
 
             if (otherOrders.length === 0) return; 
 
             otherOrders.sort((a, b) => orderType === ORDER_BUY 
                 ? b.price - a.price
-                : a.price - b.price
+                : a.price - b.price // Sort in descending order for sell orders
             );
 
             const orderIndex = otherOrders.findIndex(o => o.id === order.id);
-            // console.log(orderIndex);
             if (orderIndex > 5) {
                 Game.market.cancelOrder(order.id);
 
@@ -958,10 +956,15 @@ global.getCachedStructures = function (roomName, structureType) {
         }
 
         let structures = [];
+        let lookAtCache = {};
         for (let i = 0; i < coordinatePairs.length; i++) {
-            const lookAtResult = Game.rooms[roomName].lookAt(coordinatePairs[i].x, coordinatePairs[i].y);
+            const pos = coordinatePairs[i];
+            const key = `${pos.x},${pos.y}`;
+            if (!lookAtCache[key]) {
+                lookAtCache[key] = Game.rooms[roomName].lookAt(pos.x, pos.y);
+            }
 
-            const structure = lookAtResult.find(
+            const structure = lookAtCache[key].find(
                 (s) => s.type === LOOK_STRUCTURES && s.structure.structureType === structureType
             );
             if (structure) {
@@ -1339,13 +1342,17 @@ global.getAllStuctures = function(roomName){
     return global.cache[roomName][ANY];
 };
 
-global.getMarketOrders = function(){
+global.getMarketOrders = function(orderType, resourceType){
     if(!global.cache){
         global.cache = {};
     }
     if(!global.cache.marketOrders){
-        const orders = Game.market.getAllOrders();
+        const orders = Game.market.getAllOrders({type: orderType, resourceType: resourceType});
+        for(const order in orders){
+            console.log(`${order.id}`);
+        }
         global.cache.marketOrders = orders;
+        global.cache.marketRefresh = Game.time;
     }
 
     return global.cache.marketOrders;
@@ -3013,8 +3020,8 @@ module.exports.loop = function() {
                             }
                         }
                         if(orders.length == 0){
-                            var otherOrders = global.getMarketOrders(order => order.resourceType == RESOURCE &&
-                            order.type == ORDER_SELL);
+                            var otherOrders = Game.market.getAllOrders({type: ORDER_SELL, resourceType: RESOURCE});
+
                             otherOrders.sort(function(a,b){return a.price - b.price;});
                         if(otherOrders.length > 0){
                             Game.market.createOrder({
@@ -3034,8 +3041,7 @@ module.exports.loop = function() {
                         }
                     }
                     if(terminal.store[RESOURCE] > excludeCapacity/uniqueResources.length){
-                        var otherOrders = global.getMarketOrders(order => order.resourceType == RESOURCE &&
-                        order.type == ORDER_BUY);
+                        var otherOrders = Game.market.getAllOrders({type: ORDER_BUY, resourceType: RESOURCE});
                         otherOrders.sort(function(a,b){return b.price - a.price;});
                         if(otherOrders.length > 0){
                             Game.market.deal(otherOrders[0].id, Math.min(otherOrders[0].amount, terminal.store[RESOURCE]*0.25), roomName);
@@ -3044,40 +3050,35 @@ module.exports.loop = function() {
                 }
             });
 
-            if(terminal.store[mineralType] > 50000){
+            if (terminal.store[mineralType] > 50000) {
                 const myOrders = Game.market.orders;
                 const orders = [];
-                for(const id in myOrders){
+                for (const id in myOrders) {
                     const order = myOrders[id];
-                    if(order.resourceType == mineralType && order.type == ORDER_SELL && order.roomName === roomName){
-                        orders.push(myOrders[id]);
+                    if (order.resourceType == mineralType && order.type == ORDER_SELL && order.roomName === roomName) {
+                        orders.push(order);
                     }
                 }
-                if(orders.length == 0){
-                    var otherOrders = global.getMarketOrders(order => order.resourceType == mineralType &&
-                      order.type == ORDER_SELL);
-                      otherOrders.sort(function(a,b){return a.price - b.price;});
-                    if(otherOrders.length > 0){
+                if (orders.length == 0) {
+                    var otherOrders = Game.market.getAllOrders({type: ORDER_SELL, resourceType: mineralType});
+                    otherOrders.sort(function(a, b) {
+                        return a.price - b.price; // Sort in descending order
+                    });
+                    if (otherOrders.length > 0) {
+                        const topOrder = otherOrders[0];
                         Game.market.createOrder({
                             type: ORDER_SELL,
                             resourceType: mineralType,
-                            price: otherOrders[0].price - (otherOrders[0].price * 0.01),
-                            totalAmount: terminal.store[mineralType] * 0.25,
+                            price: topOrder.price - 0.01,
+                            totalAmount: terminal.store[mineralType],
                             roomName: roomName
                         });
                     }
-                }else{
-                    _.forEach(orders, function(order){
-                        if(!order.active){
-                            Game.market.extendOrder(order.id, terminal.store[mineralType] * 0.25);
-                        }
-                    });
                 }
             }
             if(terminal.store[mineralType] > 100000){
-                const otherOrders = global.getMarketOrders(order => order.resourceType == mineralType &&
-                    order.type == ORDER_BUY &&
-                    Game.market.calcTransactionCost(order.amount, roomName, order.roomName) < terminal.store[RESOURCE_ENERGY] * 0.8);
+                const otherOrders = Game.market.getAllOrders({type: ORDER_BUY, resourceType: mineralType}).filter(orderGame.market.calcTransactionCost(order.amount, roomName, order.roomName) < terminal.store[RESOURCE_ENERGY] * 0.8);
+
                 if(otherOrders.length > 0){
                     otherOrders.sort(function(a,b){return b.price - a.price;});
                     const order = otherOrders[0];
@@ -3092,31 +3093,77 @@ module.exports.loop = function() {
                 
             }
 
-            if(terminal.store[RESOURCE_ENERGY] > 100000){
+            // if (terminal.store[RESOURCE_ENERGY] > 100000) {
+            //     console.log(roomName, terminal.store[RESOURCE_ENERGY]);
+            //     const myOrders = Game.market.orders;
+            //     const orders = [];
+            //     for (const id in myOrders) {
+            //         const order = myOrders[id];
+            //         if (order.resourceType == RESOURCE_ENERGY && order.type == ORDER_SELL && order.roomName === roomName) {
+            //             orders.push(order);
+            //         }
+            //     }
+            //     console.log(roomName, orders.length);
+            //     if (orders.length == 0) {
+            //         var otherOrders = global.getMarketOrders(order => order.resourceType == RESOURCE_ENERGY &&
+            //             order.type == ORDER_SELL);
+            //         otherOrders.sort(function(a, b) {
+            //             return b.price - a.price; // Sort in descending order
+            //         });
+            //         if (otherOrders.length > 0) {
+            //             const topOrder = otherOrders[0];
+            //             const totalAmount = terminal.store[RESOURCE_ENERGY] * 0.5;
+            //             const freeCapacity = terminal.store.getFreeCapacity();
+            //             if (freeCapacity >= totalAmount) {
+            //                 const status = Game.market.createOrder({
+            //                     type: ORDER_SELL,
+            //                     resourceType: RESOURCE_ENERGY,
+            //                     price: topOrder.price - 0.01,
+            //                     totalAmount: totalAmount,
+            //                     roomName: roomName
+            //                 });
+            //                 console.log(roomName, status);
+            //             } else {
+            //                 console.log(roomName, 'Not enough space in terminal to create order');
+            //             }
+            //         }
+            //     }
+            // }
+
+            if (terminal.store[RESOURCE_ENERGY] > 100000) {
                 const myOrders = Game.market.orders;
                 const orders = [];
-                for(const id in myOrders){
+                for (const id in myOrders) {
                     const order = myOrders[id];
-                    if(order.resourceType == RESOURCE_ENERGY && order.type == ORDER_SELL && order.roomName === roomName){
+                    if (order.resourceType == RESOURCE_ENERGY && order.type == ORDER_SELL && order.roomName === roomName) {
                         orders.push(myOrders[id]);
                     }
                 }
-                if(orders.length == 0){
-                    var otherOrders = global.getMarketOrders(order => order.resourceType == RESOURCE_ENERGY &&
-                      order.type == ORDER_SELL);
-                      otherOrders.sort(function(a,b){return a.price - b.price;});
-                    if(otherOrders.length > 0){
-                        Game.market.createOrder({
-                            type: ORDER_SELL,
-                            resourceType: RESOURCE_ENERGY,
-                            price: otherOrders[0].price - (otherOrders[0].price * 0.01),
-                            totalAmount: terminal.store[RESOURCE_ENERGY] * 0.25,
-                            roomName: roomName
-                        });
+                if (orders.length == 0) {
+                    var otherOrders = Game.market.getAllOrders({type: ORDER_SELL, resourceType: RESOURCE_ENERGY});
+                    otherOrders.sort(function(a, b) {
+                        return a.price - b.price; // Sort in descending order
+                    });
+                    if (otherOrders.length > 0) {
+                        const topOrder = otherOrders[0];
+                        const totalAmount = terminal.store[RESOURCE_ENERGY] * 0.5;
+                        const freeCapacity = terminal.store.getFreeCapacity();
+                        if (freeCapacity >= totalAmount) {
+                            const status = Game.market.createOrder({
+                                type: ORDER_SELL,
+                                resourceType: RESOURCE_ENERGY,
+                                price: topOrder.price - 0.01,
+                                totalAmount: totalAmount,
+                                roomName: roomName
+                            });
+                            console.log(roomName, status);
+                        } else {
+                            console.log(roomName, 'Not enough space in terminal to create order');
+                        }
                     }
-                }else{
-                    _.forEach(orders, function(order){
-                        if(!order.active){
+                } else {
+                    _.forEach(orders, function(order) {
+                        if (!order.active) {
                             Game.market.extendOrder(order.id, terminal.store[RESOURCE_ENERGY] * 0.25);
                         }
                     });
@@ -3136,8 +3183,8 @@ module.exports.loop = function() {
                         }
                     }
                     if(orders.length == 0){
-                        var otherOrders = global.getMarketOrders(order => order.resourceType == resourceType &&
-                          order.type == ORDER_BUY);
+                        var otherOrders = Game.market.getAllOrders({type: ORDER_BUY, resourceType: resourceType})
+
                           otherOrders.sort(function(a,b){return b.price - a.price;});
                         if(otherOrders.length > 0){
                             const status = Game.market.createOrder({
