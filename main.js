@@ -3077,8 +3077,7 @@ module.exports.loop = function() {
                 }
             }
             if(terminal.store[mineralType] > 100000){
-                const otherOrders = Game.market.getAllOrders({type: ORDER_BUY, resourceType: mineralType}).filter(Game.market.calcTransactionCost(order.amount, roomName, order.roomName) < terminal.store[RESOURCE_ENERGY] * 0.8);
-
+const otherOrders = Game.market.getAllOrders({type: ORDER_BUY, resourceType: mineralType}).filter(order => Game.market.calcTransactionCost(order.amount, roomName, order.roomName) < terminal.store[RESOURCE_ENERGY] * 0.8);
                 if(otherOrders.length > 0){
                     otherOrders.sort(function(a,b){return b.price - a.price;});
                     const order = otherOrders[0];
